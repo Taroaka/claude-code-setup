@@ -1,0 +1,87 @@
+name: Automated Code Review
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed-files
+        run: |
+          echo "files<<EOF" >> $GITHUB_OUTPUT
+          git diff --name-only origin/${{ github.base_ref }}...${{ github.head_ref }} >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Generate review report
+        id: review
+        run: |
+          echo "## 📝 Automated Code Review" > review_report.md
+          echo "" >> review_report.md
+          echo "**PR**: #${{ github.event.pull_request.number }}" >> review_report.md
+          echo "**Branch**: \`${{ github.head_ref }}\` → \`${{ github.base_ref }}\`" >> review_report.md
+          echo "" >> review_report.md
+
+          echo "### 📄 Changed Files" >> review_report.md
+          echo "\`\`\`" >> review_report.md
+          echo "${{ steps.changed-files.outputs.files }}" >> review_report.md
+          echo "\`\`\`" >> review_report.md
+          echo "" >> review_report.md
+
+          echo "### 🔍 Review Checklist" >> review_report.md
+          echo "" >> review_report.md
+          echo "このPRは以下の自動チェックを通過する必要があります:" >> review_report.md
+          echo "" >> review_report.md
+          echo "- [ ] セキュリティチェック（security-check.yml）" >> review_report.md
+          echo "- [ ] Python Linting（lint-python.yml）" >> review_report.md
+          echo "- [ ] 手動レビュー（workflow/review-template.md使用）" >> review_report.md
+          echo "" >> review_report.md
+
+          echo "### 📋 推奨事項" >> review_report.md
+          echo "" >> review_report.md
+          echo "1. **セキュリティチェック**: 自動セキュリティスキャンが完了していることを確認" >> review_report.md
+          echo "2. **Linting**: Ruff、Black、mypyがパスしていることを確認" >> review_report.md
+          echo "3. **手動レビュー**: \`workflow/review-template.md\`を使用して詳細レビューを実施" >> review_report.md
+          echo "4. **テスト**: 変更に対するテストが含まれていることを確認" >> review_report.md
+          echo "" >> review_report.md
+
+          echo "### ⚠️ 注意事項" >> review_report.md
+          echo "" >> review_report.md
+          echo "- **Blocker**レベルの問題は必ず修正してください" >> review_report.md
+          echo "- **High**レベルの問題は優先的に修正してください" >> review_report.md
+          echo "- **.env**ファイルや**APIキー**が含まれていないか確認してください" >> review_report.md
+          echo "" >> review_report.md
+
+          echo "---" >> review_report.md
+          echo "*この Review は GitHub Actions によって自動生成されました*" >> review_report.md
+
+      - name: Comment PR
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const reviewReport = fs.readFileSync('review_report.md', 'utf8');
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: reviewReport
+            });
+
+      - name: Review summary
+        run: |
+          echo "✅ Review report generated and posted to PR"
+          cat review_report.md

@@ -1,0 +1,8 @@
+# レビュー履歴ディレクトリ
+
+このディレクトリにはコードレビューの履歴が保存されます。
+
+## ファイル命名規則
+`YYYY-MM-DD_task-name_review.md`
+
+例: `2026-01-04_initial-project-structure_review.md`

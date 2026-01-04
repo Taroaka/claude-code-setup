@@ -29,3 +29,33 @@ venv/
 # Build outputs
 dist/
 build/
+
+# Generated videos (temporary)
+output/
+generated_videos/
+*.mp4
+*.mov
+*.avi
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ruff
+.ruff_cache/

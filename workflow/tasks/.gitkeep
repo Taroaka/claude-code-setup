@@ -1,0 +1,8 @@
+# タスク履歴ディレクトリ
+
+このディレクトリには実装タスクの履歴が保存されます。
+
+## ファイル命名規則
+`YYYY-MM-DD_task-name.md`
+
+例: `2026-01-04_initial-project-structure.md`

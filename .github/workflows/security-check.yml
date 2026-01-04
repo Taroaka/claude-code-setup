@@ -1,0 +1,101 @@
+name: Security Check
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main, develop ]
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for .env files
+        run: |
+          if git ls-files | grep -E '\.env$|\.env\..*'; then
+            echo "::error::❌ BLOCKER: .env file detected in commit"
+            echo "Found .env files:"
+            git ls-files | grep -E '\.env$|\.env\..*'
+            exit 1
+          fi
+          echo "✅ No .env files found"
+
+      - name: Check for hardcoded secrets
+        run: |
+          echo "Scanning for potential hardcoded secrets (20+ characters)..."
+
+          # Search for common secret patterns
+          SECRETS_FOUND=0
+
+          # OpenAI API keys
+          if git grep -E 'sk-[a-zA-Z0-9]{40,}' -- '*.py' '*.js' '*.ts' '*.tsx' '*.json' '*.yaml' '*.yml' 2>/dev/null; then
+            echo "::error::❌ BLOCKER: OpenAI API key detected"
+            SECRETS_FOUND=1
+          fi
+
+          # Anthropic Claude API keys
+          if git grep -E 'sk-ant-[a-zA-Z0-9\-]{40,}' -- '*.py' '*.js' '*.ts' '*.tsx' '*.json' '*.yaml' '*.yml' 2>/dev/null; then
+            echo "::error::❌ BLOCKER: Anthropic Claude API key detected"
+            SECRETS_FOUND=1
+          fi
+
+          # Generic long strings that might be secrets
+          if git grep -E '(api[_-]?key|secret|password|token)["\s]*[:=]["\s]*[a-zA-Z0-9+/=]{20,}' --ignore-case -- '*.py' '*.js' '*.ts' '*.tsx' '*.json' '*.yaml' '*.yml' 2>/dev/null; then
+            echo "::warning::⚠️  Potential secret detected (review required)"
+            SECRETS_FOUND=1
+          fi
+
+          if [ $SECRETS_FOUND -eq 1 ]; then
+            exit 1
+          fi
+
+          echo "✅ No hardcoded secrets detected"
+
+      - name: Check for PostgreSQL credentials
+        run: |
+          echo "Scanning for hardcoded PostgreSQL connection strings..."
+
+          if git grep -E 'postgres(ql)?://[^:]+:[^@]+@' -- '*.py' '*.js' '*.ts' '*.tsx' '*.json' '*.yaml' '*.yml' 2>/dev/null; then
+            echo "::error::❌ BLOCKER: PostgreSQL connection string with credentials detected"
+            exit 1
+          fi
+
+          echo "✅ No hardcoded PostgreSQL credentials found"
+
+      - name: Check for AI service credentials
+        run: |
+          echo "Scanning for AI service API keys..."
+
+          FOUND=0
+
+          # ElevenLabs
+          if git grep -E 'eleven[_-]?labs.*[a-zA-Z0-9]{20,}' --ignore-case -- '*.py' '*.js' '*.ts' '*.json' '*.yaml' '*.yml' 2>/dev/null; then
+            echo "::error::❌ BLOCKER: ElevenLabs API key may be exposed"
+            FOUND=1
+          fi
+
+          # Google credentials
+          if git grep -E '"type":\s*"service_account"' -- '*.json' 2>/dev/null; then
+            echo "::error::❌ BLOCKER: Google service account JSON detected"
+            FOUND=1
+          fi
+
+          if [ $FOUND -eq 1 ]; then
+            exit 1
+          fi
+
+          echo "✅ No AI service credentials detected"
+
+      - name: Security scan summary
+        if: success()
+        run: |
+          echo "✅ All security checks passed!"
+          echo ""
+          echo "Checked for:"
+          echo "  - .env files"
+          echo "  - Hardcoded secrets (20+ chars)"
+          echo "  - PostgreSQL connection strings"
+          echo "  - AI service API keys (OpenAI, Claude, ElevenLabs, Google)"
