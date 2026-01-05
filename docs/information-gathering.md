@@ -5,7 +5,11 @@
 ユーザーが入力したトピックに対して、多角的・多層的に情報を収集し、構造化された知識ベースを生成するシステム。
 
 ```
-[トピック入力] → [多層的情報収集] → [オントロジーマッピング] → [MECE検証] → [フック抽出] → [構造化知識ベース]
+[トピック入力] → [初期仮説設定] → [イシューツリー構築] → [優先順位付け]
+      ↓
+[二次情報収集] → [ギャップ特定] → [一次情報収集] → [MECE検証]
+      ↓
+[So Whatテスト] → [オントロジーマッピング] → [フック抽出] → [構造化知識ベース]
 ```
 
 ## 設計原則
@@ -22,9 +26,174 @@
 - **Open Loop**: 未解決の問いによる興味維持
 - **Tension Points**: 対立・論争による緊張感
 
+### コンサル手法（Consulting Methodology）
+
+- **仮説駆動**: データ収集前に仮説を立て、検証しながら進める
+- **イシューツリー**: 問題を構造化し、優先順位をつけて効率的に収集
+- **So What テスト**: 「だから何？」を繰り返し、本質的示唆を抽出
+- **ピラミッド原則**: ボトムアップで統合、トップダウンで提示
+
+## 仮説駆動型フレームワーク
+
+### 初期仮説の設定
+
+トピック入力後、網羅的収集の前に初期仮説を設定する。
+
+```yaml
+hypothesis_framework:
+  # 初期仮説
+  initial_hypothesis:
+    statement: string           # 仮説文
+    rationale: string           # 仮説を立てた根拠
+    assumptions:                # 仮説が正しいための前提条件
+      - assumption: string
+        testable: boolean       # 検証可能か
+
+  # 仮説ツリー（仮説を分解）
+  hypothesis_tree:
+    root: string                # ルート仮説
+    branches:
+      - branch_hypothesis: string
+        sub_hypotheses:
+          - hypothesis: string
+            validation_method: string   # 検証方法
+            data_needed: string         # 必要なデータ
+            priority: high|medium|low
+
+  # 検証状態の追跡
+  validation_tracking:
+    - hypothesis: string
+      status: validated|refuted|partial|pending
+      evidence:
+        - finding: string
+          source: string
+          supports: boolean     # 仮説を支持するか
+      confidence: float
+      next_action: string       # 次のアクション
+```
+
+### 仮説設定のガイドライン
+
+| ステップ | 内容 | 例（桃太郎） |
+|---------|------|-------------|
+| 1. 初期仮説 | トピックの本質についての仮説 | 「桃太郎は古代の政治的出来事を反映した民話である」 |
+| 2. 前提条件 | 仮説が正しいために必要な条件 | 「成立時期と歴史的事件が一致する」「地名に対応がある」 |
+| 3. 検証方法 | 各前提をどう検証するか | 「学術論文で成立時期を確認」「地名の語源を調査」 |
+| 4. 優先順位 | インパクト×検証容易性で優先度 | 「成立時期」= High、「地名対応」= Medium |
+
+## イシューツリー
+
+### 問題の構造化
+
+トピックを検証可能な論点に分解する。
+
+```yaml
+issue_tree:
+  root_question: string         # 根本の問い
+
+  branches:
+    - issue: string             # 論点
+      type: what|why|how        # 論点タイプ
+      sub_issues:               # 下位論点
+        - issue: string
+          sub_issues: []
+
+      # 収集計画
+      data_plan:
+        source_type: primary|secondary
+        specific_sources: [string]
+        expected_effort: high|medium|low
+
+      # 状態管理
+      status: not_started|in_progress|answered|blocked
+      answer: string            # 回答（判明後）
+      confidence: float
+```
+
+### イシューツリーの構築方法
+
+```
+4つの分解レンズ:
+├── Stakeholder（利害関係者）: 誰の視点で見るか
+├── Process（プロセス）: どの段階・工程か
+├── Segment（セグメント）: どの分類・カテゴリか
+└── Math（数式分解）: 構成要素に分解
+```
+
+### 例：桃太郎のイシューツリー
+
+```
+Q: 桃太郎とは何か？（根本の問い）
+├── Q1: 物語の内容は？ [What]
+│   ├── Q1-1: 原典のストーリーは？
+│   ├── Q1-2: 登場人物は？
+│   └── Q1-3: バリエーションは？
+├── Q2: なぜこの物語が生まれたか？ [Why]
+│   ├── Q2-1: 歴史的背景は？
+│   ├── Q2-2: 文化的意味は？
+│   └── Q2-3: 類似の物語は？
+├── Q3: どのように伝承されてきたか？ [How]
+│   ├── Q3-1: 地域差は？
+│   ├── Q3-2: 時代による変化は？
+│   └── Q3-3: 現代での扱いは？
+└── Q4: なぜ今も人気があるか？ [Why]
+    ├── Q4-1: 普遍的テーマは？
+    ├── Q4-2: 教育的価値は？
+    └── Q4-3: エンタメ展開は？
+```
+
+## 収集優先順位付け
+
+### 優先度マトリクス
+
+```yaml
+prioritization:
+  criteria:
+    impact:           # 仮説検証へのインパクト
+      high: 3
+      medium: 2
+      low: 1
+    effort:           # 収集の労力
+      high: 3
+      medium: 2
+      low: 1
+    availability:     # 情報の入手可能性
+      high: 3
+      medium: 2
+      low: 1
+
+  formula: "(impact * availability) / effort"
+
+  priority_matrix:
+    - item: string
+      impact: high|medium|low
+      effort: high|medium|low
+      availability: high|medium|low
+      score: float
+      action: collect_now|collect_later|skip|delegate
+```
+
+### 優先順位の決定フロー
+
+```
+1. 各論点に impact/effort/availability を評価
+2. スコア算出: (impact × availability) ÷ effort
+3. スコア順にソート
+4. 上位からリソースを割り当て
+
+判断基準:
+- score ≥ 3.0 → collect_now（即時収集）
+- score 1.5-3.0 → collect_later（後回し）
+- score < 1.5 → skip（スキップ）または delegate（委任）
+```
+
 ## 情報収集の階層
 
-### Level 1: 原典・一次資料
+### 二次情報（Secondary Research / デスクリサーチ）
+
+既存の公開情報から収集。**最初に実施**。
+
+#### Level 1: 原典・一次資料
 
 最優先で取得。全文テキストの確保を目指す。
 
@@ -36,7 +205,7 @@
 | Project Gutenberg | 著作権切れ英語文学 | API / Mirror |
 | Internet Archive | 書籍・音声・映像 | API |
 
-### Level 2: 学術・研究
+#### Level 2: 学術・研究
 
 学術的な裏付け・解釈を取得。
 
@@ -48,7 +217,7 @@
 | 大学リポジトリ | 学位論文・研究成果 | OAI-PMH |
 | JSTOR | 海外学術誌 | JSTOR API |
 
-### Level 3: 百科事典・解説
+#### Level 3: 百科事典・解説
 
 基礎情報・構造化データを取得。
 
@@ -60,7 +229,7 @@
 | ブリタニカ | 専門的解説 | API / スクレイピング |
 | DBpedia | Wikipedia構造化版 | SPARQL |
 
-### Level 4: 考察・解釈・民間知識
+#### Level 4: 考察・解釈・民間知識
 
 多様な視点・解釈を取得。
 
@@ -71,6 +240,122 @@
 | Quora | Q&A形式の知識 | スクレイピング |
 | YouTube | 解説動画トランスクリプト | YouTube Data API |
 | note/Zenn | 日本語の考察記事 | スクレイピング |
+
+### 一次情報（Primary Research）
+
+二次情報で埋められないギャップを直接収集。
+
+```yaml
+primary_research:
+  # エキスパートインタビュー
+  expert_interviews:
+    - expert_type: string       # 専門家タイプ（学者、実務家等）
+      expertise_area: string    # 専門領域
+      interview_objectives:     # インタビュー目的
+        - objective: string
+          related_issue: string # 対応するイシュー
+
+      # 質問設計（オープンエンド、広→狭）
+      questions:
+        - question: string
+          type: broad|specific|probing
+          expected_insight: string
+
+      # 結果
+      key_insights: [string]
+      quotes: [string]
+      follow_up_needed: boolean
+
+  # フィールド観察
+  field_observations:
+    - location: string
+      objective: string
+      observations:
+        - observation: string
+          interpretation: string
+      artifacts_collected: [string]  # 収集物
+
+  # アンケート調査
+  surveys:
+    - target_population: string
+      sample_size: int
+      methodology: string
+      key_questions: [string]
+      key_findings:
+        - finding: string
+          statistical_significance: float
+```
+
+### エキスパートインタビューのベストプラクティス
+
+| 原則 | 説明 |
+|------|------|
+| **事前準備** | 二次情報で答えられる質問は事前に除外 |
+| **構造化** | 広い質問 → 具体的質問へ流れるように設計 |
+| **オープンエンド** | Yes/No で終わらない質問を使う |
+| **中立性** | 誘導せず、客観的な入力を得る |
+| **深掘り** | 「なぜ？」「具体的には？」で掘り下げる |
+
+## So What テスト（示唆抽出）
+
+### ピラミッド原則に基づく統合
+
+収集した情報から本質的な示唆を抽出する。
+
+```yaml
+synthesis:
+  # 生の発見事項
+  raw_findings:
+    - finding: string
+      source: string
+      reliability: float
+
+  # So What の連鎖（3回繰り返す）
+  so_what_chain:
+    - finding: string           # 発見事項
+      so_what_1: string         # だから何？（1段目：直接的意味）
+      so_what_2: string         # だから何？（2段目：より広い意味）
+      so_what_3: string         # だから何？（3段目：本質的示唆）
+      final_insight: string     # 最終的な示唆
+
+  # グルーピングと統合
+  insight_groups:
+    - group_theme: string       # グループテーマ
+      supporting_findings: [string]
+      synthesized_insight: string
+      confidence: float
+
+  # 統括的結論（Governing Thought）
+  governing_thought: string     # 一言で言うと何か
+
+  # SCQA構造
+  scqa:
+    situation: string           # 状況（誰もが同意する前提）
+    complication: string        # 問題（何が課題か）
+    question: string            # 問い（何を解決すべきか）
+    answer: string              # 答え（結論・提言）
+```
+
+### So What テストの実行方法
+
+```
+発見: 「桃太郎の最古の文献は室町時代末期」
+  ↓ So What?
+意味1: 「500年以上の歴史がある」
+  ↓ So What?
+意味2: 「日本人に長く愛されてきた普遍的な物語」
+  ↓ So What?
+示唆: 「時代を超えて共感される要素がある → それは何か？」
+```
+
+### SCQA フレームワーク
+
+| 要素 | 説明 | 例（桃太郎研究） |
+|------|------|-----------------|
+| **Situation** | 前提・背景 | 桃太郎は日本で最も有名な昔話の一つである |
+| **Complication** | 問題・課題 | しかし、その起源や本来の意味は諸説あり不明確 |
+| **Question** | 問い | 桃太郎の本質的な意味と価値は何か？ |
+| **Answer** | 答え・結論 | 桃太郎は○○を象徴する物語であり、現代においても○○の価値がある |
 
 ## オントロジー定義
 
@@ -300,6 +585,56 @@ cognitive_levels:
 topic: string
 aliases: [string]
 
+# === 仮説駆動 ===
+hypothesis:
+  initial_hypothesis:
+    statement: string
+    rationale: string
+    assumptions:
+      - assumption: string
+        testable: boolean
+  hypothesis_tree:
+    root: string
+    branches:
+      - branch_hypothesis: string
+        sub_hypotheses:
+          - hypothesis: string
+            validation_method: string
+            data_needed: string
+            priority: high|medium|low
+  validation_tracking:
+    - hypothesis: string
+      status: validated|refuted|partial|pending
+      evidence:
+        - finding: string
+          source: string
+          supports: boolean
+      confidence: float
+
+# === イシューツリー ===
+issue_tree:
+  root_question: string
+  branches:
+    - issue: string
+      type: what|why|how
+      sub_issues: []
+      data_plan:
+        source_type: primary|secondary
+        specific_sources: [string]
+        expected_effort: high|medium|low
+      status: not_started|in_progress|answered|blocked
+      answer: string
+      confidence: float
+
+# === 優先順位 ===
+prioritization:
+  - item: string
+    impact: high|medium|low
+    effort: high|medium|low
+    availability: high|medium|low
+    score: float
+    action: collect_now|collect_later|skip
+
 # === 原典情報 ===
 primary_source:
   full_text: string
@@ -307,10 +642,25 @@ primary_source:
   source_url: string
   original_date: string
   author: string
-  variants:                     # 異本・バリエーション
+  variants:
     - version_name: string
       differences: string
       source: string
+
+# === 一次情報収集 ===
+primary_research:
+  expert_interviews:
+    - expert_type: string
+      expertise_area: string
+      questions: [string]
+      key_insights: [string]
+  field_observations:
+    - location: string
+      observations: [string]
+  surveys:
+    - target: string
+      sample_size: int
+      key_findings: [string]
 
 # === 知識グラフ ===
 knowledge_graph:
@@ -322,7 +672,7 @@ knowledge_graph:
   edges:
     - from: node_id
       to: node_id
-      relation: string          # relationship_typesから選択
+      relation: string
       description: string
       source: string
 
@@ -336,7 +686,7 @@ facts:
     - date: string
       event: string
       source: string
-      cognitive_level: string   # Bloom's Taxonomy
+      cognitive_level: string
   geography:
     - place: string
       relevance: string
@@ -362,7 +712,7 @@ interpretations:
     - topic: string
       positions: [string]
       sources: [string]
-      resolution_status: string  # resolved|ongoing|unknown
+      resolution_status: string
 
 # === 関連情報 ===
 connections:
@@ -377,6 +727,26 @@ connections:
   cross_references:
     - topic: string
       relation: string
+
+# === So What 統合 ===
+synthesis:
+  raw_findings: [string]
+  so_what_chain:
+    - finding: string
+      so_what_1: string
+      so_what_2: string
+      so_what_3: string
+      final_insight: string
+  insight_groups:
+    - group_theme: string
+      supporting_findings: [string]
+      synthesized_insight: string
+  governing_thought: string
+  scqa:
+    situation: string
+    complication: string
+    question: string
+    answer: string
 
 # === エンゲージメント価値 ===
 engagement:
@@ -398,7 +768,7 @@ engagement:
 mece_coverage:
   dimensions:
     temporal:
-      past: float       # 0.0-1.0
+      past: float
       present: float
       future: float
     perspective:
@@ -409,17 +779,17 @@ mece_coverage:
       concrete: float
       interpretive: float
       meta: float
-  gaps:                 # 未収集の観点
+  gaps:
     - dimension: string
       value: string
       priority: high|medium|low
-  overlaps:             # 重複情報
+  overlaps:
     - items: [string]
       action: merge|keep_both|discard
 
 # === 認知レベル分布 ===
 cognitive_distribution:
-  remember: int         # 該当情報数
+  remember: int
   understand: int
   apply: int
   analyze: int
@@ -431,8 +801,9 @@ metadata:
   collected_at: datetime
   sources_used: [string]
   confidence_score: float
-  completeness_score: float  # MECE充足度
-  engagement_score: float    # フック充実度
+  completeness_score: float
+  engagement_score: float
+  hypothesis_validation_rate: float  # 仮説検証率
 ```
 
 ## 収集プロセス
@@ -449,37 +820,67 @@ metadata:
   - オントロジータイプ推定: Work (物語作品)
 ```
 
-### Step 2: 一次資料の取得
+### Step 2: 初期仮説設定
 
 ```
-優先順位:
-1. 青空文庫で全文検索 → 全文テキスト取得
-2. 国会図書館で原典検索 → デジタル資料取得
-3. 複数バージョンがある場合は全て取得
-4. 異本・バリエーションを variants に記録
+トピックについて:
+1. 初期仮説を1-3個設定
+2. 各仮説の前提条件を列挙
+3. 検証方法を特定
+4. 仮説ツリーを構築
 ```
 
-### Step 3: 多角的情報収集
-
-各レベルから並列で情報取得。
+### Step 3: イシューツリー構築
 
 ```
+1. 根本の問い（Root Question）を設定
+2. What/Why/How で分解
+3. 各論点を2-3階層で詳細化
+4. MECEを確認
+```
+
+### Step 4: 優先順位付け
+
+```
+各論点に対して:
+1. Impact（仮説検証へのインパクト）を評価
+2. Effort（収集労力）を評価
+3. Availability（入手可能性）を評価
+4. スコア算出: (Impact × Availability) ÷ Effort
+5. 優先順位でソート
+```
+
+### Step 5: 二次情報収集（デスクリサーチ）
+
+```
+優先順位に従って:
 [Level 1: 原典] ──┐
 [Level 2: 学術] ──┼──→ [情報プール]
 [Level 3: 百科] ──┤
 [Level 4: 考察] ──┘
 ```
 
-### Step 4: オントロジーマッピング
+### Step 6: ギャップ特定
 
 ```
-収集した情報から:
-1. エンティティを抽出 → nodes に追加
-2. 関係性を特定 → edges に追加
-3. 知識グラフを構築
+収集した情報を分析:
+1. イシューツリーの未回答論点を特定
+2. 仮説検証に不足しているエビデンスを特定
+3. MECE次元でのカバレッジギャップを特定
+4. 一次情報が必要な項目をリストアップ
 ```
 
-### Step 5: MECE検証
+### Step 7: 一次情報収集
+
+```
+ギャップを埋めるために:
+1. エキスパートインタビューの実施
+2. フィールド観察（必要な場合）
+3. アンケート調査（必要な場合）
+4. 結果を情報プールに追加
+```
+
+### Step 8: MECE検証
 
 ```
 1. 各次元でカバレッジを算出
@@ -488,7 +889,27 @@ metadata:
 4. 優先度の高いギャップに対して追加収集
 ```
 
-### Step 6: フック抽出
+### Step 9: So What テスト
+
+```
+収集した情報に対して:
+1. 各発見事項に「So What?」を3回適用
+2. 最終的な示唆を抽出
+3. 関連する示唆をグルーピング
+4. 統括的結論（Governing Thought）を導出
+5. SCQA構造で整理
+```
+
+### Step 10: オントロジーマッピング
+
+```
+収集した情報から:
+1. エンティティを抽出 → nodes に追加
+2. 関係性を特定 → edges に追加
+3. 知識グラフを構築
+```
+
+### Step 11: フック抽出
 
 ```
 収集した情報から:
@@ -499,7 +920,7 @@ metadata:
 5. curiosity_score を算出
 ```
 
-### Step 7: 認知レベル分類
+### Step 12: 認知レベル分類
 
 ```
 各情報に対して:
@@ -509,7 +930,7 @@ metadata:
 4. バランスが偏っていれば追加収集
 ```
 
-### Step 8: 構造化・統合
+### Step 13: 構造化・統合
 
 ```
 [情報プール] → [スキーママッピング] → [構造化知識ベース]
@@ -520,6 +941,7 @@ metadata:
               - confidence_score
               - completeness_score
               - engagement_score
+              - hypothesis_validation_rate
 ```
 
 ## 品質基準
@@ -529,8 +951,11 @@ metadata:
 以下は必ず取得を試みる：
 
 - `topic` - トピック名
+- `hypothesis.initial_hypothesis` - 初期仮説
+- `issue_tree.root_question` - 根本の問い
 - `primary_source.full_text` または `primary_source.source` - 原典情報
 - `facts.origin` - 起源・成立情報
+- `synthesis.governing_thought` - 統括的結論
 - `knowledge_graph.nodes` - 最低3つのエンティティ
 - `engagement.hooks` - 最低2つのフック
 - `metadata.sources_used` - 使用ソース一覧
@@ -565,6 +990,16 @@ metadata:
 | 0.3-0.5 | 1種類のフックのみ |
 | 0.0-0.3 | フックなし |
 
+### 仮説検証率
+
+| スコア | 基準 |
+|--------|------|
+| 0.9-1.0 | 全仮説が検証済み（validated/refuted） |
+| 0.7-0.9 | 80%以上の仮説が検証済み |
+| 0.5-0.7 | 50-80%の仮説が検証済み |
+| 0.3-0.5 | 30-50%の仮説が検証済み |
+| 0.0-0.3 | 30%未満の仮説が検証済み |
+
 ## エラーハンドリング
 
 | 状況 | 対応 |
@@ -575,6 +1010,8 @@ metadata:
 | トピックが曖昧 | 候補を列挙してユーザーに確認 |
 | MECE ギャップ検出 | 優先度に応じて追加収集を実行 |
 | フック不足 | Level 4（考察・民間知識）を重点的に追加収集 |
+| 仮説が全て棄却 | 新たな仮説を設定し、収集プロセスを再実行 |
+| エキスパートにアクセス不可 | 代替ソース（学術論文、インタビュー記事）で補完 |
 
 ## 使用例
 
@@ -590,6 +1027,58 @@ metadata:
 topic: "桃太郎"
 aliases: ["ももたろう", "Momotaro"]
 
+hypothesis:
+  initial_hypothesis:
+    statement: "桃太郎は古代の政治的出来事（吉備国平定）を反映した民話である"
+    rationale: "地名の一致、桃の呪術的意味、鬼の正体に関する諸説から推測"
+    assumptions:
+      - assumption: "成立時期と吉備国関連の歴史的事件が時期的に一致する"
+        testable: true
+      - assumption: "岡山（吉備国）との地名・伝承の対応がある"
+        testable: true
+  validation_tracking:
+    - hypothesis: "吉備国平定説"
+      status: partial
+      evidence:
+        - finding: "柳田國男が1933年に同様の説を提唱"
+          source: "『桃太郎の誕生』"
+          supports: true
+        - finding: "成立時期（室町末期）と吉備国平定（古墳時代）に大きな時間差"
+          source: "国文学研究資料館"
+          supports: false
+      confidence: 0.5
+
+issue_tree:
+  root_question: "桃太郎とは何か？その本質的意味は？"
+  branches:
+    - issue: "物語の原典と内容は？"
+      type: what
+      status: answered
+      answer: "室町時代末期成立。御伽草子版が最古。複数のバリエーションあり"
+      confidence: 0.85
+    - issue: "なぜこの物語が生まれたか？"
+      type: why
+      status: in_progress
+      sub_issues:
+        - issue: "歴史的背景は？"
+          status: partial
+        - issue: "桃の象徴的意味は？"
+          status: answered
+
+prioritization:
+  - item: "原典テキストの取得"
+    impact: high
+    effort: low
+    availability: high
+    score: 9.0
+    action: collect_now
+  - item: "エキスパートインタビュー"
+    impact: high
+    effort: high
+    availability: medium
+    score: 2.0
+    action: collect_later
+
 primary_source:
   full_text: "むかしむかし、あるところに、おじいさんとおばあさんが..."
   source: "青空文庫 - 楠山正雄『桃太郎』"
@@ -599,6 +1088,20 @@ primary_source:
     - version_name: "御伽草子版"
       differences: "桃を食べて若返った老夫婦から生まれる"
       source: "国立国会図書館デジタル"
+
+synthesis:
+  so_what_chain:
+    - finding: "桃太郎の最古の文献は室町時代末期"
+      so_what_1: "500年以上の歴史がある"
+      so_what_2: "日本人に長く愛されてきた普遍的な物語"
+      so_what_3: "時代を超えて共感される普遍的要素がある"
+      final_insight: "桃太郎には人間の根源的な願望（成長、正義、帰還）が含まれている"
+  governing_thought: "桃太郎は、若者の成長と社会への貢献という普遍的テーマを、日本的な象徴（桃、鬼、きびだんご）で表現した民話である"
+  scqa:
+    situation: "桃太郎は日本で最も有名な昔話の一つであり、誰もが知っている"
+    complication: "しかし、その起源・本来の意味・なぜ長く愛されるかは諸説あり不明確"
+    question: "桃太郎の本質的な意味と、現代における価値は何か？"
+    answer: "桃太郎は成長譚の原型であり、『弱者が仲間を得て強大な敵に立ち向かう』という普遍的構造が、時代を超えた共感を生んでいる"
 
 knowledge_graph:
   nodes:
@@ -628,30 +1131,6 @@ knowledge_graph:
       to: onigashima
       relation: "located_in"
 
-facts:
-  origin:
-    description: "室町時代末期に成立したとされる日本の昔話"
-    sources: ["国文学研究資料館", "Wikipedia"]
-    confidence: 0.85
-  geography:
-    - place: "岡山県"
-      relevance: "桃太郎伝説発祥の地の一つ"
-    - place: "女木島（鬼ヶ島）"
-      relevance: "鬼ヶ島のモデルとされる"
-
-interpretations:
-  academic:
-    - claim: "桃太郎は大和朝廷の吉備国平定を反映している"
-      author: "柳田國男"
-      source: "『桃太郎の誕生』"
-      year: 1933
-      cognitive_level: "analyze"
-  controversies:
-    - topic: "桃太郎発祥地論争"
-      positions: ["岡山県説", "香川県説", "愛知県説"]
-      sources: ["各県観光協会", "民俗学研究"]
-      resolution_status: "ongoing"
-
 engagement:
   hooks:
     - type: mystery
@@ -670,10 +1149,6 @@ engagement:
     - topic: "桃太郎は正義か侵略者か"
       positions: ["伝統的解釈：鬼退治の英雄", "現代的再解釈：一方的な侵略者"]
       narrative_potential: "価値観の転換を促す議論ネタ"
-  open_questions:
-    - question: "きびだんごの『きび』は吉備国か黍か"
-      known_theories: ["吉備国説", "穀物の黍説"]
-      investigation_status: "諸説あり"
 
 mece_coverage:
   dimensions:
@@ -693,14 +1168,6 @@ mece_coverage:
       value: "antagonist"
       priority: "medium"
 
-cognitive_distribution:
-  remember: 12
-  understand: 8
-  apply: 4
-  analyze: 6
-  evaluate: 3
-  create: 2
-
 metadata:
   collected_at: "2026-01-05T12:00:00Z"
   sources_used:
@@ -708,7 +1175,9 @@ metadata:
     - "Wikipedia"
     - "CiNii"
     - "国立国会図書館"
+    - "『桃太郎の誕生』柳田國男"
   confidence_score: 0.82
   completeness_score: 0.75
   engagement_score: 0.85
+  hypothesis_validation_rate: 0.6
 ```
