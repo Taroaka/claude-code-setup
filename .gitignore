@@ -32,6 +32,7 @@ build/
 
 # Generated videos (temporary)
 output/
+!output/research/
 generated_videos/
 *.mp4
 *.mov
