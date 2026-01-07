@@ -1,10 +1,10 @@
 # Story Creation System
 
-物語生成システム - Deep Researchの成果を1分動画向けの物語に加工する手順書
+物語生成システム - Deep Researchの成果を動画向けの物語に加工する手順書
 
 ## 概要
 
-このドキュメントは、`docs/information-gathering.md` で収集した構造化情報を、TikTok向け1分動画の物語に変換するための手順を定義する。
+このドキュメントは、`docs/information-gathering.md` で収集した構造化情報を、動画コンテンツの物語に変換するための手順を定義する。
 
 ### 位置づけ
 
@@ -21,7 +21,7 @@
 ### 出力
 
 - `output/stories/{topic}_{timestamp}.md` - 物語スクリプト
-- 1分（60秒）の動画用台本
+- 動画用台本（任意の長さに対応）
 
 ---
 
@@ -33,38 +33,58 @@
 
 **核心原理**: 人間は「変容」の物語に本能的に惹かれる。
 
-### 1分動画への圧縮
+### 3フェーズ構造（圧縮版）
 
 17段階 → 12段階 → 8段階 → **3要素**に圧縮
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│  [日常世界]  →  [試練/変容]  →  [新しい自分での帰還]  │
-│   (0-5秒)       (5-50秒)         (50-60秒)             │
-└─────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│  [日常世界]  →  [試練/変容]  →  [新しい自分での帰還]        │
+│   (0-10%)        (10-85%)          (85-100%)                 │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-| フェーズ | 時間 | 目的 | 必須要素 |
+| フェーズ | 割合 | 目的 | 必須要素 |
 |---------|------|------|----------|
-| **日常世界** | 0-5秒 | フック、共感 | 視聴者が「自分ごと」と感じる状況 |
-| **試練/変容** | 5-50秒 | 緊張、発見 | 問題→格闘→洞察 の流れ |
-| **帰還** | 50-60秒 | 満足、余韻 | 変容後の姿、学びの提示 |
+| **日常世界** | 0-10% | フック、共感 | 視聴者が「自分ごと」と感じる状況 |
+| **試練/変容** | 10-85% | 緊張、発見 | 問題→格闘→洞察 の流れ |
+| **帰還** | 85-100% | 満足、余韻 | 変容後の姿、学びの提示 |
 
 ### Dan Harmon ストーリーサークル（8段階）
 
 より詳細な構造が必要な場合：
 
 ```
-        1. 快適圏にいる
+        1. 快適圏にいる (0%)
               ↓
-    8. 変化している ← 2. 何かを望む
+    8. 変化している ← 2. 何かを望む (12.5%)
+         (100%)          ↓
+              ↑      3. 未知に入る (25%)
+    7. 帰還する           ↓
+       (87.5%)      4. 適応する (37.5%)
               ↑           ↓
-    7. 帰還する      3. 未知に入る
-              ↑           ↓
-    6. 代償を払う → 4. 適応する
-              ↑           ↓
-              └── 5. 望みを得る
+    6. 代償を払う → 5. 望みを得る (50%)
+       (62.5%)
 ```
+
+### キャンベル17段階（完全版）
+
+長尺コンテンツや詳細設計が必要な場合：
+
+| 幕 | 段階 | 名称 | 割合目安 |
+|----|------|------|----------|
+| **第1幕: 出発** | 1 | 日常世界 | 0-5% |
+| | 2 | 冒険への召命 | 5-10% |
+| | 3 | 召命の拒否 | 10-12% |
+| | 4 | 賢者との出会い | 12-15% |
+| | 5 | 第一関門の通過 | 15-20% |
+| **第2幕: イニシエーション** | 6 | 試練・仲間・敵 | 20-35% |
+| | 7 | 最深部への接近 | 35-45% |
+| | 8 | 最大の試練 | 45-55% |
+| | 9 | 報酬 | 55-65% |
+| **第3幕: 帰還** | 10 | 帰路 | 65-75% |
+| | 11 | 復活 | 75-90% |
+| | 12 | 霊薬を持っての帰還 | 90-100% |
 
 ---
 
@@ -113,12 +133,12 @@ usage:
 
 Deep Researchの `synthesis.scqa` を物語骨格に変換：
 
-| SCQA要素 | 物語での役割 | 動画での位置 |
+| SCQA要素 | 物語での役割 | 位置（割合） |
 |----------|-------------|-------------|
-| Situation | 日常世界の設定 | 0-3秒 |
-| Complication | 問題・葛藤の提示 | 3-10秒 |
-| Question | 視聴者の疑問喚起 | 10-15秒（暗示） |
-| Answer | 解決・洞察の提示 | 40-60秒 |
+| Situation | 日常世界の設定 | 0-5% |
+| Complication | 問題・葛藤の提示 | 5-15% |
+| Question | 視聴者の疑問喚起 | 15-25%（暗示） |
+| Answer | 解決・洞察の提示 | 70-100% |
 
 #### Step 2.2: So What チェーン適用
 
@@ -135,23 +155,25 @@ Deep Researchの `synthesis.scqa` を物語骨格に変換：
 ```
 感情
  ↑
- │         ★ クライマックス
- │        / \
- │       /   \
- │      /     ★ 解決
- │ ★   /
- │  \ /
- │   ★ 葛藤深化
+ │              ★ クライマックス
+ │             / \
+ │            /   \
+ │           /     ★ 解決
+ │  ★       /
+ │   \     /
+ │    ★  /
+ │     \/
+ │      ★ 葛藤深化
  │
- └──────────────────────→ 時間
-   0s   15s   30s   45s   60s
+ └──────────────────────────────→ 時間
+   0%    25%    50%    75%   100%
 ```
 
 ### Phase 3: 脚本執筆
 
-#### Step 3.1: オープニング（0-5秒）
+#### Step 3.1: オープニング（0-10%）
 
-**目的**: 視聴者を3秒以内に引き込む
+**目的**: 視聴者を早期に引き込む
 
 **テクニック**:
 - **疑問形**: 「なぜ〇〇は△△なのか？」
@@ -161,38 +183,38 @@ Deep Researchの `synthesis.scqa` を物語骨格に変換：
 
 **テンプレート**:
 ```
-[視覚] 印象的な1カット
-[音声] フック文（15-20文字以内）
-[テキスト] 補助テロップ
+[視覚] 印象的なオープニングカット
+[音声] フック文
+[テキスト] 補助テロップ（必要に応じて）
 ```
 
-#### Step 3.2: 本体（5-50秒）
+#### Step 3.2: 本体（10-85%）
 
 **構造**:
 ```
-[問題提示] 5-15秒
+[問題提示] 10-25%
    ↓ 「でも...」「しかし...」
-[葛藤深化] 15-30秒
+[葛藤深化] 25-50%
    ↓ 「そして...」「ついに...」
-[転換点] 30-40秒
+[転換点] 50-70%
    ↓ 「実は...」「だから...」
-[解決への道] 40-50秒
+[解決への道] 70-85%
 ```
 
-**視覚変化ルール**:
-- 1-3秒ごとにカット変更
+**視覚設計の原則**:
+- 適度な頻度でカット変更（長さに応じて調整）
 - 静止画の場合はズーム/パンで動きを追加
-- テキストは8文字以内/行
+- テキストは読みやすいサイズと表示時間を確保
 
-#### Step 3.3: エンディング（50-60秒）
+#### Step 3.3: エンディング（85-100%）
 
-**目的**: 満足感と余韻、ループ促進
+**目的**: 満足感と余韻
 
 **テクニック**:
 - **変容の可視化**: Before → After を明示
 - **学びの提示**: 「だから〇〇なのだ」
 - **オープンループ**: 次回への伏線（シリーズの場合）
-- **ループ構造**: 最初のシーンに戻る → 再生率200%
+- **循環構造**: 最初のシーンに戻る
 
 ### Phase 4: 品質検証
 
@@ -202,7 +224,7 @@ Deep Researchの `synthesis.scqa` を物語骨格に変換：
 checklist:
   ordinary_world:
     present: true/false
-    seconds: 0-5
+    position: "0-10%"
   call_to_adventure:
     present: true/false
     type: question/problem/opportunity
@@ -221,11 +243,10 @@ checklist:
 
 ```yaml
 engagement_checklist:
-  hook_in_3_seconds: true/false  # 必須
+  strong_opening: true/false  # 必須
   curiosity_maintained: true/false
-  visual_change_frequency: "1-3秒" / "3-5秒" / "5秒以上"
+  pacing_appropriate: true/false
   emotional_payoff: true/false
-  loop_potential: true/false
 ```
 
 #### Step 4.3: 情報正確性チェック
@@ -304,7 +325,7 @@ story_metadata:
   topic: "string"
   source_research: "output/research/{file}.md"
   created_at: "ISO8601"
-  duration_seconds: 60
+  target_duration: null  # 秒数（任意、未指定可）
   pattern_used: "hidden_truth | counterintuitive | mystery | hero | emotional"
 
 # === 物語構造 ===
@@ -317,7 +338,7 @@ story_structure:
   journey:
     ordinary_world:
       description: "string"
-      duration_seconds: 5
+      position_percent: 0-10
 
     call_to_adventure:
       trigger: "string"
@@ -327,7 +348,7 @@ story_structure:
       challenge: "string"
       tension_elements:
         - "string"
-      duration_seconds: 30
+      position_percent: 45-55
 
     transformation:
       before: "string"
@@ -336,7 +357,7 @@ story_structure:
 
     return:
       resolution: "string"
-      duration_seconds: 10
+      position_percent: 85-100
 
   theme:
     governing_thought: "string"
@@ -344,11 +365,9 @@ story_structure:
 
 # === 脚本 ===
 script:
-  total_duration: 60
-
   scenes:
     - scene_id: 1
-      timestamp: "00:00-00:05"
+      position_percent: "0-10"
       phase: "opening"
 
       visual:
@@ -358,33 +377,31 @@ script:
 
       audio:
         narration: "string"
-        narration_word_count: 20  # 目安: 3-4文字/秒
         bgm: "string"
         sfx: "string"
 
       text_overlay:
-        main: "string"  # 8文字以内
+        main: "string"
         sub: "string"
 
       hook_type: "question | statement | shock | emotion"
 
     - scene_id: 2
-      timestamp: "00:05-00:15"
+      position_percent: "10-25"
       phase: "development"
       # ... 以下同様
 
     - scene_id: 3
-      timestamp: "00:15-00:35"
+      position_percent: "25-55"
       phase: "ordeal"
 
     - scene_id: 4
-      timestamp: "00:35-00:50"
+      position_percent: "55-85"
       phase: "transformation"
 
     - scene_id: 5
-      timestamp: "00:50-01:00"
+      position_percent: "85-100"
       phase: "ending"
-      loop_point: true  # ループ再生を促す場合
 
 # === エンゲージメント設計 ===
 engagement_design:
@@ -392,31 +409,31 @@ engagement_design:
     type: "string"
     content: "string"
     source: "engagement.hooks[n]"
-    placement: "00:00-00:03"
+    position_percent: 0-5
 
   tension_arc:
-    - timestamp: "00:10"
+    - position_percent: 15
       tension_level: 3
       element: "問題提示"
-    - timestamp: "00:25"
+    - position_percent: 40
       tension_level: 7
       element: "葛藤深化"
-    - timestamp: "00:40"
+    - position_percent: 55
       tension_level: 9
       element: "クライマックス"
-    - timestamp: "00:55"
+    - position_percent: 90
       tension_level: 5
       element: "解決"
 
   retention_techniques:
     - technique: "open_loop"
-      placement: "00:08"
+      position_percent: 10
       description: "疑問を提示して答えを後回し"
     - technique: "pattern_interrupt"
-      placement: "00:20"
+      position_percent: 35
       description: "予想を裏切る展開"
-    - technique: "loop_structure"
-      placement: "00:55-01:00"
+    - technique: "circular_structure"
+      position_percent: 95
       description: "最初のシーンに視覚的に戻る"
 
 # === 品質スコア ===
@@ -427,11 +444,10 @@ quality_scores:
   emotional_impact: 0.0-1.0
 
   checklist:
-    hook_in_3_seconds: true
+    strong_opening: true
     ordeal_present: true
     transformation_clear: true
     facts_verified: true
-    loop_ready: true
 
 # === ソース追跡 ===
 sources:
@@ -475,23 +491,23 @@ sources:
 
 より細かい構成管理が必要な場合：
 
-| ビート | 位置 | 60秒換算 |
-|--------|------|----------|
-| Opening Image | 1% | 0-1秒 |
-| Theme Stated | 5% | 3秒 |
-| Set-Up | 1-10% | 1-6秒 |
-| Catalyst | 10% | 6秒 |
-| Debate | 10-25% | 6-15秒 |
-| Break into Two | 25% | 15秒 |
-| B Story | 30% | 18秒 |
-| Fun and Games | 30-50% | 18-30秒 |
-| Midpoint | 50% | 30秒 |
-| Bad Guys Close In | 50-75% | 30-45秒 |
-| All Is Lost | 75% | 45秒 |
-| Dark Night of the Soul | 75-80% | 45-48秒 |
-| Break into Three | 80% | 48秒 |
-| Finale | 80-99% | 48-59秒 |
-| Final Image | 99-100% | 59-60秒 |
+| ビート | 位置 |
+|--------|------|
+| Opening Image | 0-1% |
+| Theme Stated | 5% |
+| Set-Up | 1-10% |
+| Catalyst | 10% |
+| Debate | 10-25% |
+| Break into Two | 25% |
+| B Story | 30% |
+| Fun and Games | 30-50% |
+| Midpoint | 50% |
+| Bad Guys Close In | 50-75% |
+| All Is Lost | 75% |
+| Dark Night of the Soul | 75-80% |
+| Break into Three | 80% |
+| Finale | 80-99% |
+| Final Image | 99-100% |
 
 ---
 
@@ -501,21 +517,13 @@ sources:
 
 ```yaml
 constraints:
-  duration:
-    target: 60
-    min: 55
-    max: 65
-
   narration:
-    words_per_second: 3-4
-    total_words: 180-240
+    words_per_second: 3-4  # 日本語目安
+    pacing: "コンテンツの長さに応じて調整"
 
-  text_overlay:
-    max_characters_per_line: 8
-    max_lines: 2
-
-  visual_change:
-    max_static_duration: 3  # 秒
+  visual:
+    maintain_interest: true
+    appropriate_pacing: true
 
   accuracy:
     min_source_confidence: 0.7
@@ -524,9 +532,9 @@ constraints:
 
 ### 避けるべきパターン
 
-1. **情報過多**: 1分に詰め込みすぎない（1つのテーマに集中）
+1. **情報過多**: 詰め込みすぎない（1つのテーマに集中）
 2. **抽象的すぎる**: 具体的なエピソード、数字、人物を使う
-3. **フックの弱さ**: 最初の3秒で視聴者を失う
+3. **フックの弱さ**: 冒頭で視聴者を失う
 4. **変容の不在**: 「だから何？」で終わらない
 5. **事実の捏造**: Research出力にない情報を勝手に追加しない
 
@@ -550,9 +558,9 @@ constraints:
    └→ research.synthesis.scqa を変換
 
 5. 脚本執筆
-   ├→ オープニング（0-5秒）
-   ├→ 本体（5-50秒）
-   └→ エンディング（50-60秒）
+   ├→ オープニング（0-10%）
+   ├→ 本体（10-85%）
+   └→ エンディング（85-100%）
 
 6. 品質検証
    ├→ ヒーローズジャーニー適合
@@ -574,7 +582,7 @@ constraints:
 - Murdock, Maureen. *The Heroine's Journey*. 1990.
 - Snyder, Blake. *Save the Cat!*. 2005.
 
-### 短尺コンテンツ向け
+### 応用ガイド
 
 - [Chris Vogler's Short Form Guide](https://chrisvogler.wordpress.com/2011/02/24/heros-journey-short-form/)
 - [Dan Harmon's Story Circle](https://reedsy.com/blog/guide/story-structure/dan-harmon-story-circle/)
