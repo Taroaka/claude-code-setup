@@ -88,6 +88,137 @@
 
 ---
 
+## 感情設計：エモーショナル・ローラーコースター
+
+### 理論的背景
+
+感情設計は、アリストテレスの『詩学』（紀元前335年頃）のカタルシス理論に起源を持ち、現代のデータサイエンスにより6つの基本パターンに分類された。Kurt Vonnegutが1950年代に提唱した「Story Shapes」理論は、2016年のReagan et al.の研究で科学的に実証された。
+
+**核心原理**: 観客の感情を意図的に上下させることで、深い没入と満足感を生み出す。
+
+### 6つの基本的感情曲線
+
+```
+1. Rags to Riches（上昇）
+   感情 ↗ 一貫した上昇
+
+2. Tragedy（下降）
+   感情 ↘ 一貫した下降
+
+3. Man in Hole（下降→上昇）★最も人気
+   感情 ↘ ↗ 逆境から回復
+
+4. Icarus（上昇→下降）
+   感情 ↗ ↘ 成功から没落
+
+5. Cinderella（上昇→下降→上昇）
+   感情 ↗ ↘ ↗ 上昇、挫折、最終的成功
+
+6. Oedipus（下降→上昇→下降）
+   感情 ↘ ↗ ↘ 下降、一時的希望、最終的悲劇
+```
+
+**「Man in Hole」型が最も人気である理由**: 人間は逆境からの復活を見たいという根源的欲求を持つ。これは希望と回復力への普遍的な共感を反映している。
+
+### 緊張と弛緩のリズム
+
+感情ジェットコースターの核心は、緊張（Tension）と弛緩（Release）の戦略的配置にある。
+
+```
+感情強度
+ ↑
+ │     ★ 緊張ピーク1    ★ 緊張ピーク2（より高い）
+ │    /\               /\
+ │   /  \             /  \          ★ クライマックス
+ │  /    \           /    \        /\
+ │ /      \弛緩     /      \弛緩  /  \
+ │/        \       /        \    /    \
+ │──────────\_____/──────────\__/      \解決
+ │
+ └──────────────────────────────────────────→ 時間
+   0%      25%      50%      75%      100%
+```
+
+**設計原則**:
+- 緊張の後には必ず弛緩を配置
+- 各緊張ピークは前より高くする（エスカレーション）
+- 弛緩の間に次の緊張の種を蒔く
+- クライマックス前に「最も暗い瞬間」を配置
+
+### Hitchcockの爆弾理論
+
+「サスペンスは情報の非対称性から生まれる」
+
+```
+[弱いサスペンス] テーブルの下に爆弾 → 爆発 → 観客は15秒の驚き
+[強いサスペンス] 観客に爆弾を見せる → 5分間の会話 → 観客は5分間の緊張
+```
+
+**適用**: 視聴者に「何かが起こる」ことを予告し、その実現を待たせる。
+
+### ピクサー22のストーリーテリングルール（抜粋）
+
+Emma Coats（ピクサー）が整理した感情設計の原則：
+
+| # | ルール | 感情設計への示唆 |
+|---|--------|-----------------|
+| 1 | キャラクターの努力を描く（成功より試み） | 苦闘が共感を生む |
+| 4 | Once upon a time... Every day... One day... Because of that... Until finally... | 感情の因果連鎖を構築 |
+| 6 | キャラクターが得意なことと苦手なことを与える | 葛藤の源泉を設計 |
+| 7 | 結末から逆算して設計 | 感情的到達点を先に決める |
+| 16 | キャラクターを困難な状況に置いてから脱出方法を考える | 緊張を先に、解決は後 |
+| 19 | 偶然は主人公を困難に陥れるのに使えるが、救出には使えない | 解決は主体的に |
+| 22 | 自分の物語の核心は何か？最も経済的な表現を見つける | 感情的核心を明確に |
+
+### 感情操作テクニック
+
+#### 視覚による感情誘導
+
+| 要素 | 感情効果 |
+|------|---------|
+| ローアングル | 威圧感、権力 |
+| ハイアングル | 脆弱性、孤独 |
+| クローズアップ | 親密さ、感情の強調 |
+| ワイドショット | 孤立、圧倒的状況 |
+| 暖色系 | 温かさ、安心 |
+| 寒色系 | 冷たさ、不安 |
+
+#### 音響による感情誘導
+
+| 要素 | 感情効果 |
+|------|---------|
+| 低音の持続 | 不安、緊張 |
+| 高音のスティンガー | 驚き、恐怖 |
+| 沈黙 | 緊張の極大化、重要性 |
+| テンポ加速 | 興奮、緊急性 |
+| マイナーキー | 悲しみ、不安 |
+| メジャーキー | 喜び、達成感 |
+
+### 感情設計フレームワーク比較
+
+| フレームワーク | 提唱者 | 年 | 特徴 | 最適用途 |
+|--------------|-------|-----|------|---------|
+| Paradigm | Syd Field | 1979 | Plot Point I/IIを軸 | 基本構造の理解 |
+| Story | Robert McKee | 1997 | シーンごとの値変化 | 複雑な物語 |
+| Save the Cat! | Blake Snyder | 2005 | 15の詳細ビート | 商業映画 |
+| 22 Steps | John Truby | 2007 | 道徳的成長の強調 | キャラクター重視 |
+| Emotional Structure | Peter Dunne | 2006 | 感情構造に特化 | 感情設計の深化 |
+| 6 Arcs | Reagan et al. | 2016 | データ科学的分類 | パターン選択 |
+
+### カタルシスの設計
+
+カタルシス（感情の浄化）は物語の最終目標。
+
+**構成要素**:
+1. **蓄積**: 感情を段階的に構築
+2. **臨界点**: 感情が限界に達する瞬間
+3. **解放**: 蓄積された感情の放出
+4. **余韻**: 解放後の新しい平衡状態
+
+**配置**: 通常、物語の85-95%地点
+
+---
+
 ## 物語生成プロセス
 
 ### Phase 1: 素材分析（Research解析）
@@ -363,6 +494,24 @@ story_structure:
     governing_thought: "string"
     universal_truth: "string"
 
+  emotional_arc:
+    type: "rags_to_riches | tragedy | man_in_hole | icarus | cinderella | oedipus"
+    tension_peaks:
+      - position_percent: 25
+        intensity: 1-10
+        description: "string"
+      - position_percent: 50
+        intensity: 1-10
+        description: "string"
+      - position_percent: 75
+        intensity: 1-10
+        description: "string"
+    catharsis:
+      position_percent: 85-95
+      buildup_elements:
+        - "string"
+      release_trigger: "string"
+
 # === 脚本 ===
 script:
   scenes:
@@ -575,17 +724,28 @@ constraints:
 
 ## 参考文献
 
-### 理論的基盤
+### 物語構造理論
 
 - Campbell, Joseph. *The Hero with a Thousand Faces*. 1949.
 - Vogler, Christopher. *The Writer's Journey: Mythic Structure for Writers*. 1992.
 - Murdock, Maureen. *The Heroine's Journey*. 1990.
 - Snyder, Blake. *Save the Cat!*. 2005.
 
+### 感情設計理論
+
+- Aristotle. *Poetics*. 紀元前335年頃.（カタルシス理論の原典）
+- Field, Syd. *Screenplay: The Foundations of Screenwriting*. 1979.
+- McKee, Robert. *Story: Substance, Structure, Style, and the Principles of Screenwriting*. 1997.
+- Truby, John. *The Anatomy of Story: 22 Steps to Becoming a Master Storyteller*. 2007.
+- Dunne, Peter. *Emotional Structure: Creating the Story Beneath the Plot*. 2006.
+- Reagan, A.J. et al. "The emotional arcs of stories are dominated by six basic shapes." *EPJ Data Science*. 2016.
+
 ### 応用ガイド
 
 - [Chris Vogler's Short Form Guide](https://chrisvogler.wordpress.com/2011/02/24/heros-journey-short-form/)
 - [Dan Harmon's Story Circle](https://reedsy.com/blog/guide/story-structure/dan-harmon-story-circle/)
+- [No Film School - Pixar 22 Rules](https://nofilmschool.com/2012/06/22-rules-storytelling-pixar)
+- [MIT Technology Review - Six Emotional Arcs](https://www.technologyreview.com/2016/07/06/158961/data-mining-reveals-the-six-basic-emotional-arcs-of-storytelling/)
 
 ### 分析事例
 
