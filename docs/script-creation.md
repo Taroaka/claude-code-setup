@@ -222,6 +222,29 @@ scenes:
       hook_type: "question | statement | shock | emotion"
       emotional_target: "curiosity"  # この時点で狙う感情
 
+    # --- シーン目的（G.O.D.D.）---
+    scene_goal:
+      goal: "シーン内で主人公が達成したいこと"
+      obstacle: "外的/内的の障害"
+      dilemma: "簡単に選べない選択肢の葛藤"
+      decision: "主人公が下す決断（次シーンへ影響）"
+
+    # --- シーン内ミニ構造 ---
+    micro_structure:
+      beats:
+        - "Establish the scene"
+        - "Catalyst"
+        - "Rising action"
+        - "Climax"
+        - "Aftermath"
+      value_shift: "シーン内で起きる変化（価値の移動）"
+
+    # --- Show, don’t tell チェック ---
+    show_dont_tell:
+      visual_first: true
+      action_supports_narration: true
+      lines_without_visual_support: 0
+
     # --- 登場キャラクター ---
     characters:
       - character_id: "protagonist"
@@ -318,6 +341,76 @@ scene_continuity:
 ```
 
 ---
+
+### 3.4 シーン目的（G.O.D.D.）チェック
+
+各シーンが「物語と人物を前進させる」ための必須要素を定義する。
+
+```yaml
+scene_goal_check:
+  goal: "シーン内で主人公が達成したいこと"
+  obstacle: "外的/内的の障害"
+  dilemma: "簡単に選べない選択肢の葛藤"
+  decision: "主人公が下す決断（次シーンへ影響）"
+
+  # すべて埋まらない場合はシーンを再設計
+  all_fields_required: true
+```
+
+### 3.5 シーンのミニ構造（ビート設計）
+
+シーンは小さな物語として、内部で変化（value shift）を起こす。
+
+```yaml
+scene_micro_structure:
+  beats:
+    - "Establish the scene"  # 状況の提示
+    - "Catalyst"             # 触発・変化の兆し
+    - "Rising action"        # 圧力の上昇
+    - "Climax"               # 反応・決定の瞬間
+    - "Aftermath"            # 余韻・次への布石
+
+  value_shift_required: true
+```
+
+### 3.6 Show, don’t tell を担保するチェック
+
+情報伝達はセリフよりも行動・視覚・サブテキストを優先する。
+
+```yaml
+show_dont_tell_check:
+  replace_exposition_with_visual: true
+  replace_exposition_with_action: true
+  lines_without_visual_support: 0  # 説明セリフの残数
+```
+
+### 3.7 script breakdown / shot list / storyboard との接続
+
+台本は制作工程に接続される前提で設計する。
+
+```yaml
+previsualization_handoff:
+  script_breakdown:
+    extracted_elements:
+      - cast
+      - wardrobe
+      - props
+      - sfx
+      - locations
+
+  shot_list:
+    required_fields:
+      - shot_type
+      - camera_angle
+      - camera_movement
+      - lighting
+
+  storyboard:
+    required_fields:
+      - key_frame
+      - composition
+      - motion_direction
+```
 
 ## 第4章：タイムライン設計
 

@@ -1,0 +1,36 @@
+# Minimal script output template (from docs/script-creation.md)
+script_metadata:
+  topic: "string"
+  source_story: "output/<topic>_<timestamp>/story.md"
+  created_at: "ISO8601"
+  target_duration: 60
+  aspect_ratio: "9:16"
+
+characters:
+  - character_id: "protagonist"
+    name: "string"
+    role: "主人公"
+
+style_guide:
+  visual_style: "string"
+
+timeline:
+  total_duration: 60
+
+scenes:
+  - scene_id: 1
+    timing:
+      duration_seconds: 6
+      timestamp: "00:00-00:06"
+    narrative:
+      phase: "ordinary_world"
+      purpose: "string"
+    visual:
+      generation_prompt: "string"
+    audio:
+      narration:
+        text: "string"
+
+quality_check:
+  timing:
+    narration_fits: true

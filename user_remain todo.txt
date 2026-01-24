@@ -1,0 +1,9 @@
+# User Remaining TODO
+
+## Environment & API keys
+- [ ] Copy `.env.example` to `.env`
+- [ ] Fill API keys (e.g., `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`)
+- [ ] Confirm `DATABASE_URL` points to local Postgres (`db:5432`) when using docker-compose
+
+## Local run (optional)
+- [ ] `docker-compose up --build`

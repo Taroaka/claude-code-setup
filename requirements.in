@@ -1,0 +1,5 @@
+# Add Python dependencies here (unpinned).
+# Example:
+# langchain
+# langgraph
+# psycopg[binary]

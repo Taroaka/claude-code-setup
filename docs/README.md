@@ -1,0 +1,25 @@
+# Docs Index
+
+この `docs/` 配下は、本リポジトリの「恒久仕様」を置く場所です。
+
+## まず読む（入口）
+- 実行方法: `docs/how-to-run.md`
+- 全体アーキテクチャ: `docs/system-architecture.md`
+- 未決定事項: `docs/open-decisions.md`
+
+## 生成パイプライン（設計仕様）
+- 情報収集: `docs/information-gathering.md`
+- 物語生成: `docs/story-creation.md`
+- 台本生成: `docs/script-creation.md`
+- 動画生成: `docs/video-generation.md`
+- オーケストレーション/QA/運用: `docs/orchestration-and-ops.md`
+
+## データ/運用
+- データライフサイクル: `docs/data-lifecycle.md`
+- データ契約（state/成果物テンプレ）: `docs/data-contracts.md`
+- セキュリティ/コンプライアンス: `docs/security-compliance.md`
+- CI/CD: `docs/ci-cd.md`
+- DB設計: `docs/DATABASE_DESIGN.md`
+
+## 変更履歴（作業単位）
+作業ごとの要求・設計・タスクリストは `.steering/` 配下に残します。

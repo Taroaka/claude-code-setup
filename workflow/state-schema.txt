@@ -1,0 +1,43 @@
+# State log schema (append-only, key=value)
+#
+# - Stored in project folder: output/<topic>_<timestamp>/state.txt
+# - Each block is a snapshot of the latest state.
+# - Blocks are separated by a line containing only "---".
+# - Resume by reading the last block.
+# - Rollback by copying a previous block and appending it as the newest.
+#
+# Required keys (minimum):
+#   timestamp=ISO8601
+#   job_id=JOB_YYYY-MM-DD_0001
+#   topic=string
+#   status=INIT|RESEARCH|STORY|SCRIPT|VIDEO|QA|DONE
+#
+# Optional keys:
+#   gate.research_review=required|optional|skipped
+#   gate.story_review=required|optional|skipped
+#   gate.video_review=required|optional|skipped
+#   artifact.research=output/<topic>_<timestamp>/research.md
+#   artifact.story=output/<topic>_<timestamp>/story.md
+#   artifact.script=output/<topic>_<timestamp>/script.md
+#   artifact.video=output/<topic>_<timestamp>/video.mp4
+#   qa.accuracy_score=0.0-1.0
+#   qa.engagement_score=0.0-1.0
+#   qa.consistency_score=0.0-1.0
+#   runtime.attempts.research=0
+#   runtime.attempts.story=0
+#   runtime.attempts.script=0
+#   runtime.attempts.video=0
+#   runtime.scene.1.status=draft|review|revise|accepted|failed
+#   runtime.scene.1.attempts=0
+#   last_error=string|null
+#
+# Example:
+#
+# timestamp=2026-01-17T12:00:00Z
+# job_id=JOB_2026-01-17_0001
+# topic=桃太郎
+# status=RESEARCH
+# gate.research_review=required
+# artifact.research=output/momotaro_20260117_1200/research.md
+# runtime.attempts.research=1
+# ---

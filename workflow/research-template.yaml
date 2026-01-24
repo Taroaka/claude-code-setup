@@ -1,0 +1,41 @@
+# Minimal research output template (from docs/information-gathering.md)
+topic: "string"
+aliases: ["string"]
+
+hypothesis:
+  initial_hypothesis:
+    statement: "string"
+    rationale: "string"
+    assumptions:
+      - assumption: "string"
+        testable: true
+
+issue_tree:
+  root_question: "string"
+  branches:
+    - issue: "string"
+      type: "what|why|how"
+      status: "not_started|in_progress|answered|blocked"
+      answer: "string"
+      confidence: 0.0
+
+knowledge_graph:
+  nodes:
+    - id: "string"
+      type: "Person|Place|Event|Concept"
+      label: "string"
+  edges:
+    - from: "string"
+      to: "string"
+      relation: "string"
+
+engagement:
+  hooks:
+    - type: "mystery|counterintuitive|hidden_truth|emotional"
+      content: "string"
+      curiosity_score: 0.0
+
+metadata:
+  collected_at: "ISO8601"
+  sources_used: ["string"]
+  confidence_score: 0.0

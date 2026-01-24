@@ -1,0 +1,107 @@
+# Implementation Phase TODO (LangGraph)
+
+## 0) Vision / scope / success criteria (foundation)
+- [ ] Define product goal and primary audience (to C, platform assumptions)
+- [ ] Define MVP target: input = story title only; output = story design doc + 1-min vertical mp4 (placeholder OK first)
+- [ ] Confirm constraints: duration=60s, aspect=9:16, language=ja (override via config if needed)
+- [ ] Set success metrics (quality threshold, turnaround time, cost per video)
+- [ ] Define non-goals and “out of scope” for v1
+
+## 1) System architecture (foundation)
+- [x] Decide deployment mode: local-only MVP vs cloud (dev/staging/prod)
+- [x] Choose execution model: single-node vs distributed (orchestrator + workers)
+- [x] Define storage strategy: object storage for mp4/assets + metadata DB for jobs
+- [x] Decide job queue/executor approach for long-running video generation
+- [x] Define state management strategy (LangGraph state persistence vs external store)
+- [x] Decide model/providers for image/video/TTS (or keep as pluggable interfaces)
+- [x] Define API boundaries (CLI-only vs API server) and module ownership
+- [x] Define cost/latency targets and basic resource sizing (CPU/GPU, memory)
+
+## 2) Data lifecycle & governance
+- [x] Define artifact taxonomy and retention policy (how long to keep raw assets)
+- [x] Define data lineage tracking (source → prompt → asset → mp4)
+- [x] Define storage naming/versioning scheme (topic, timestamp, run id)
+- [x] Decide caching strategy for repeated prompts/assets
+- [x] Define dataset/asset cleanup job (quota and aging rules)
+
+## 3) Security / compliance / legal
+- [x] Define secrets management (local dev vs deployment)
+- [x] Define access control model (single-user vs multi-user)
+- [x] Define content policy and compliance checks (copyright, likeness, disclosure)
+- [x] Define audit log requirements (who approved what and when)
+- [x] Define license handling for music/SFX/fonts and attribution template
+
+## 4) Dev environment & Docker
+- [x] Create Dockerfile for runtime (Python, ffmpeg, required libs)
+- [x] Create docker-compose for local dev (app + optional db/object storage)
+- [x] Define volume mounts for outputs, cache, and artifact persistence
+- [x] Add .env.example and secrets handling strategy (local vs deploy)
+- [x] Decide GPU dev path (CUDA base image or CPU-only fallback)
+- [x] Lock dependencies for reproducible builds (requirements.txt/poetry/uv)
+
+## 5) CI/CD & deployment pipeline
+- [x] Choose container registry and image tagging strategy
+- [x] Add build/test pipeline (lint, unit tests, minimal dry-run)
+- [x] Define deploy workflow (dev/staging/prod) and rollback strategy
+- [x] Document infra-as-code approach (optional) and environment configs
+- [x] Add basic observability plan (logs, metrics, traces)
+- [x] Add runtime health checks and job timeout/kill strategy
+
+## 6) Data contracts (align design phase → implementation)
+- [x] Formalize state schema (job, inputs, constraints, artifacts, gates, audit) based on docs/orchestration-and-ops.md
+- [x] Define artifact paths: output/<topic>_<timestamp>/{research.md, story.md, script.md, video.mp4}
+- [x] Create minimal YAML/JSON templates for research/story/script outputs (reuse fields from docs/*)
+
+## 7) LangGraph topology (high level)
+- [x] Map states: INIT → RESEARCH → STORY → SCRIPT → VIDEO → QA → DONE
+- [x] Add retry/revise edges per QA rules (accuracy → RESEARCH, engagement → STORY, consistency → VIDEO)
+- [x] Implement human review gates (research/story/video) with “required | optional | skipped”
+
+## 8) Agent roles & prompts
+- [x] Director (main agent): uses docs/story-creation.md to produce story outline + scene list
+- [x] Scriptwriter (sub-agent): writes one scene at a time in docs/script-creation.md format
+- [x] Reviewer (director): checks continuity, world settings, constraints, and scene transitions
+- [x] QA/Compliance agent: checks accuracy, consistency, rights, safety per docs/orchestration-and-ops.md
+- [x] Define prompt versioning strategy and change log
+- [x] Define grounding/citation rules for research outputs
+
+## 9) Scene-level loop design (core of implementation phase)
+- [x] Define scene plan object (scene_id, purpose, duration, key beats, visual/audio notes)
+- [x] Scriptwriter generates a single scene from scene plan + global context
+- [x] Reviewer validates scene vs. story arc + adjacent scenes; returns accept/revise with reasons
+- [x] If revise: Scriptwriter re-submits; track attempts; escalate to human gate if repeated failures
+- [x] Assemble accepted scenes into a full script.md with timelines and asset hints
+
+## 10) Video generation integration
+- [x] Specify interface for “scene → assets” (still image prompts, motion prompts, TTS lines, BGM notes)
+- [x] Implement placeholders for image/video/tts generation (stubs or local mocks)
+- [x] Wire up scripts/render-video.sh for final mp4 assembly (clip list + narration/BGM + subtitles)
+- [x] Add quality gate checks (duration, aspect ratio, audio sync, subtitles) before DONE
+- [x] Define fallback path for missing assets (skip, regenerate, or placeholder)
+
+## 11) Orchestration artifacts & logging
+- [x] Generate orchestration manifest per job (job_id, status, artifacts, gates, audit steps)
+- [x] Log each node’s input/output for traceability and debugging
+- [x] Store review decisions and QA scores alongside artifacts
+- [x] Define run reports (summary of cost/time/quality for each job)
+
+## 12) CLI / entrypoint
+- [x] Add a simple CLI: input story title → run graph → output folder path
+- [x] Support dry-run (skip external generation; produce script + mock assets)
+- [x] Provide config flags for constraints and review gate behavior
+- [x] Add config file support (yaml) for repeatable runs
+
+## 13) QA / evaluation harness
+- [x] Build regression test set of topics and expected story qualities
+- [x] Add automated checks for structure (3-act), timing, and scene counts
+- [x] Define manual review checklist aligned with docs/orchestration-and-ops.md
+
+## 14) Validation run
+- [x] Create a sample run with a known topic (e.g., “桃太郎”)
+- [x] Verify artifacts exist and align with docs
+- [x] Confirm mp4 is generated (even if placeholder), and QA gate passes
+
+## 15) Documentation
+- [x] Document how to run (setup, CLI usage, expected outputs)
+- [x] Note manual steps for asset generation until APIs are integrated
+- [x] Record open decisions (model/tool choices, cost/quality tradeoffs)

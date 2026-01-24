@@ -6,6 +6,10 @@
 
 このドキュメントは、`docs/information-gathering.md` で収集した構造化情報を、動画コンテンツの物語に変換するための手順を定義する。
 
+### 関連ドキュメント
+
+- `docs/orchestration-and-ops.md`（全体制御・品質保証・配信/改善ループ）
+
 ### 位置づけ
 
 ```
@@ -15,12 +19,12 @@
 
 ### 入力
 
-- `output/research/{topic}_{timestamp}.md` - Deep Researchの出力ファイル
+- `output/<topic>_<timestamp>/research.md` - Deep Researchの出力ファイル
 - 構造化YAML形式の知識ベース
 
 ### 出力
 
-- `output/stories/{topic}_{timestamp}.md` - 物語スクリプト
+- `output/<topic>_<timestamp>/story.md` - 物語スクリプト
 - 動画用台本（任意の長さに対応）
 
 ---
@@ -454,7 +458,7 @@ accuracy_checklist:
 # === メタ情報 ===
 story_metadata:
   topic: "string"
-  source_research: "output/research/{file}.md"
+  source_research: "output/<topic>_<timestamp>/research.md"
   created_at: "ISO8601"
   target_duration: null  # 秒数（任意、未指定可）
   pattern_used: "hidden_truth | counterintuitive | mystery | hero | emotional"
@@ -693,7 +697,7 @@ constraints:
 
 ```
 1. Research出力の読み込み
-   └→ output/research/{topic}_{timestamp}.md
+   └→ output/<topic>_<timestamp>/research.md
 
 2. 素材分析
    ├→ 主人公候補の抽出
@@ -717,7 +721,7 @@ constraints:
    └→ 情報正確性
 
 7. 出力
-   └→ output/stories/{topic}_{timestamp}.md
+   └→ output/<topic>_<timestamp>/story.md
 ```
 
 ---

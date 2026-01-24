@@ -6,6 +6,10 @@
 
 このドキュメントは、`docs/story-creation.md` で生成した物語スクリプトを、生成AIを活用して動画に変換するための手順を定義する。
 
+### 関連ドキュメント
+
+- `docs/orchestration-and-ops.md`（全体制御・品質保証・配信/改善ループ）
+
 ### 位置づけ
 
 ```
@@ -15,12 +19,12 @@
 
 ### 入力
 
-- `output/stories/{topic}_{timestamp}.md` - 物語スクリプト
+- `output/<topic>_<timestamp>/story.md` - 物語スクリプト
 - シーンごとの視覚・音声指示
 
 ### 出力
 
-- `output/videos/{topic}_{timestamp}.mp4` - 最終動画ファイル
+- `output/<topic>_<timestamp>/video.mp4` - 最終動画ファイル
 
 ---
 
@@ -419,7 +423,7 @@ ffmpeg -i input.mp4 \
 
 ```
 1. 物語スクリプト読み込み
-   └→ output/stories/{topic}_{timestamp}.md
+   └→ output/<topic>_<timestamp>/story.md
 
 2. プリプロダクション
    ├→ キャラクターバイブル作成
@@ -438,7 +442,57 @@ ffmpeg -i input.mp4 \
    └→ 字幕追加
 
 5. 最終レンダリング
-   └→ output/videos/{topic}_{timestamp}.mp4
+   └→ output/<topic>_<timestamp>/video.mp4
+```
+
+---
+
+## mp4作成の具体手順（実務フロー）
+
+### 必要入力
+- `output/<topic>_<timestamp>/story.md`（物語スクリプト）
+- シーン分解テーブル（シーンID、尺、視覚/音声指示）
+- 参照画像（各シーン）
+- ナレーション音声（各シーン）
+- BGM / SFX
+
+### 生成・合成ステップ
+
+```
+Step A: シーン静止画の生成・選定
+  - 各シーンで複数生成 → 1枚選定
+
+Step B: Image-to-Video クリップ生成
+  - シーン単位で動画クリップ化
+
+Step C: ナレーション生成
+  - 各シーンの台詞をTTS化
+
+Step D: BGM/SFX 準備
+  - 全体尺に合わせたBGM配置
+  - 重要ポイントにSFX配置
+
+Step E: クリップ結合と音声合成
+  - クリップ結合 → 1本の動画
+  - ナレーション + BGM + SFX をミックス
+
+Step F: 字幕作成・焼き込み
+  - SRT作成 → mp4へ焼き込み
+
+Step G: 最終レンダリング
+  - 解像度/アスペクト比/音量調整
+  - output/<topic>_<timestamp>/video.mp4 出力
+```
+
+### 最低限の品質ゲート
+
+```yaml
+video_gate:
+  clip_coverage: true            # 全シーンが動画化されている
+  audio_sync: true               # ナレーションと映像が一致
+  subtitle_readable: true        # 字幕が視認可能
+  aspect_ratio_correct: true     # 9:16 or 16:9
+  render_success: true           # mp4が生成される
 ```
 
 ---
@@ -449,7 +503,7 @@ ffmpeg -i input.mp4 \
 # === メタ情報 ===
 video_metadata:
   topic: "string"
-  source_story: "output/stories/{file}.md"
+  source_story: "output/<topic>_<timestamp>/story.md"
   created_at: "ISO8601"
   duration_seconds: 60
   aspect_ratio: "16:9 | 9:16"
@@ -503,8 +557,8 @@ scenes:
 
 # === 最終出力 ===
 final_output:
-  video_file: "output/videos/{topic}_{timestamp}.mp4"
-  thumbnail: "output/videos/{topic}_{timestamp}_thumb.png"
+  video_file: "output/<topic>_<timestamp>/video.mp4"
+  thumbnail: "output/<topic>_<timestamp>/thumb.png"
 
 # === 品質チェック ===
 quality_check:
@@ -534,3 +588,26 @@ quality_check:
 ### 業界ガイドライン
 
 - [Netflix - Using Generative AI in Content Production](https://partnerhelp.netflixstudios.com/hc/en-us/articles/43393929218323-Using-Generative-AI-in-Content-Production)
+
+---
+
+## 補助スクリプト
+
+### クリップ/ナレーション一覧の生成
+
+マニフェストから ffmpeg 用の `clips.txt` と `narration_list.txt` を生成する。
+
+```bash
+# 1本分
+scripts/build-clip-lists.py \
+  --manifest output/<topic>_<timestamp>/video_manifest.md
+
+# 1物語フォルダ（manifest指定不要）
+scripts/build-clip-lists.py \
+  --story-dir output/<topic>_<timestamp>
+
+# ディレクトリ一括
+scripts/build-clip-lists.py \
+  --dir output \
+  --pattern "*_manifest.md"
+```

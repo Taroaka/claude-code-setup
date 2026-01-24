@@ -1,0 +1,41 @@
+# Minimal story output template (from docs/story-creation.md)
+story_metadata:
+  topic: "string"
+  source_research: "output/<topic>_<timestamp>/research.md"
+  created_at: "ISO8601"
+  pattern_used: "hidden_truth|counterintuitive|mystery|hero|emotional"
+
+story_structure:
+  protagonist:
+    name: "string"
+    role: "string"
+    source_node_id: "string"
+  journey:
+    ordinary_world:
+      description: "string"
+    ordeal:
+      challenge: "string"
+    transformation:
+      before: "string"
+      after: "string"
+    return:
+      resolution: "string"
+  theme:
+    governing_thought: "string"
+
+script:
+  scenes:
+    - scene_id: 1
+      phase: "opening|development|ordeal|transformation|ending"
+      narration: "string"
+      visual: "string"
+
+engagement_design:
+  primary_hook:
+    type: "string"
+    content: "string"
+    position_percent: 0
+
+quality_scores:
+  engagement_potential: 0.0
+  information_accuracy: 0.0

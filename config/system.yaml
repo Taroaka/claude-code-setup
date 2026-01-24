@@ -1,0 +1,43 @@
+# System architecture defaults for the MVP
+
+deployment:
+  mode: local
+  environments: [local]
+
+execution:
+  model: single_node
+  concurrency:
+    max_workers: 2
+    strategy: inprocess
+
+storage:
+  object_store:
+    backend: filesystem
+    root: output
+  metadata_db:
+    backend: postgres
+    uri: postgresql://toc:toc@localhost:5432/toc
+
+queue:
+  backend: inprocess
+  persistence: none
+
+state:
+  file:
+    path: output/<topic>_<timestamp>/state.txt
+    format: key_value
+    mode: append
+    separator: "---"
+
+providers:
+  image: tbd
+  video: tbd
+  tts: tbd
+  llm: langchain
+
+api:
+  boundary: claude_code
+  server_enabled: false
+
+entrypoint:
+  type: slash_command

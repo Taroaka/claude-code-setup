@@ -1,0 +1,26 @@
+services:
+  app:
+    build: .
+    env_file: .env
+    volumes:
+      - .:/app
+      - ./output:/app/output
+      - ./var:/app/var
+      - ./cache:/app/cache
+    depends_on:
+      - db
+    command: bash -lc "sleep infinity"
+
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-toc}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-toc}
+      POSTGRES_DB: ${POSTGRES_DB:-toc}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
