@@ -1,6 +1,6 @@
 # ToC Agent Guide
 
-このファイルは **`AGENTS.md` と `CLAUDE.md` で同一内容**として管理する（差分を作らない）。
+このファイルは複数モデルのAIエージェントに対してのドキュメントとするため、 **`AGENTS.md` と `CLAUDE.md` で同一内容**として管理する（差分を作らない）。
 
 ## リポジトリの個性（北極星）
 
@@ -30,6 +30,7 @@ state は **コード内の状態ではなく**、プロジェクトフォルダ
 ## ドキュメント構成（どこに何があるか）
 
 - 恒久仕様: `docs/`（入口は `docs/README.md`）
+- 実装に直結する正本: `docs/implementation/`（`.steering` から昇華した仕様）
 - 作業単位の履歴: `.steering/`（`requirements.md` → `design.md` → `tasklist.md`）
 - テンプレ/契約: `workflow/`（`workflow/*-template.yaml`, `workflow/state-schema.txt`）
 - 実行支援: `scripts/`

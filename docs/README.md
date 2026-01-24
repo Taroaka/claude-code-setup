@@ -14,6 +14,16 @@
 - 動画生成: `docs/video-generation.md`
 - オーケストレーション/QA/運用: `docs/orchestration-and-ops.md`
 
+## 実装仕様（昇華: .steering → docs）
+
+- LangGraph topology: `docs/implementation/langgraph-topology.md`
+- Agent roles & prompts: `docs/implementation/agent-roles-and-prompts.md`
+- Entrypoint (/toc-run): `docs/implementation/entrypoint.md`
+- Scene loop: `docs/implementation/scene-loop.md`
+- Video integration: `docs/implementation/video-integration.md`
+- Orchestration logging: `docs/implementation/orchestration-logging.md`
+- QA harness: `docs/implementation/qa-harness.md`
+
 ## データ/運用
 - データライフサイクル: `docs/data-lifecycle.md`
 - データ契約（state/成果物テンプレ）: `docs/data-contracts.md`

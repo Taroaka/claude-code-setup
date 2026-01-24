@@ -42,7 +42,7 @@ output/<topic>_<timestamp>/
 
 - 画像/動画/TTS の本番プロバイダは未決定（TBD）
 - 当面はプレースホルダ生成（モック）でフローを検証する
-- 具体は `.steering/20260117-video-integration/design.md` を参照
+- 具体は `docs/implementation/video-integration.md` を参照
 
 ## state運用
 
