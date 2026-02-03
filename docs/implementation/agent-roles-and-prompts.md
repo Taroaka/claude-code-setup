@@ -34,6 +34,21 @@
 - 出力: QAスコア + pass/fail + 指摘
 - 参照: `docs/orchestration-and-ops.md`
 
+### Series Planner（scene-series）
+- 入力: `story.md` / `script.md`
+- 出力: `series_plan.md`
+- エージェント定義: `.claude/agents/series-planner.md`
+
+### Scene Evidence Researcher（scene-series）
+- 入力: `research.md` + `series_plan.md`（question）
+- 出力: `scenes/sceneXX/evidence.md`
+- エージェント定義: `.claude/agents/scene-evidence-researcher.md`
+
+### Scene Scriptwriter（scene-series）
+- 入力: `scenes/sceneXX/evidence.md`
+- 出力: `scenes/sceneXX/script.md`（30–60s）
+- エージェント定義: `.claude/agents/scene-scriptwriter.md`
+
 ## プロンプト構成
 
 固定部と動的部に分離する。

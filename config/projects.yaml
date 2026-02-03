@@ -1,0 +1,8 @@
+projects:
+  - id: toc
+    name: "ToC"
+    root: "."
+    description: "Story topic -> video generation (research/story/script/assets/render)."
+
+default_project: toc
+

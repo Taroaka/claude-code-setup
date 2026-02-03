@@ -3,10 +3,11 @@
 本書は、未確定事項（TBD）を集約する。
 
 ## Providers
-- image provider（TBD）
-- video provider（TBD）
-- TTS provider（TBD）
+- image: Google Nano Banana Pro（Gemini Image / `gemini-3-pro-image-preview`）
+- video: Google Veo 3.1（`veo-3.1-generate-preview`）
+- TTS: ElevenLabs（voice/model/output_format は運用で確定）
 - LLM provider is LangChain (API-based)
+- 候補整理/調査リスト: `docs/video-production-research.md`
 
 ## Claude Code entrypoint
 - `/toc-run` の実装方法（Claude Code側の具体設定）

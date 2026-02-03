@@ -48,6 +48,19 @@ output/<topic>_<timestamp>/
   assets/
 ```
 
+scene-series（Q&A動画を複数本）:
+
+```
+output/<topic>_<timestamp>/
+  series_plan.md
+  scenes/sceneXX/
+    evidence.md
+    script.md
+    video_manifest.md
+    assets/
+    video.mp4
+```
+
 ---
 
 ## 3. Output templates（最小テンプレ）

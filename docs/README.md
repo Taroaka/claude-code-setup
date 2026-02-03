@@ -6,6 +6,7 @@
 - 実行方法: `docs/how-to-run.md`
 - 全体アーキテクチャ: `docs/system-architecture.md`
 - 未決定事項: `docs/open-decisions.md`
+- 生成（プロバイダ/不足分の調査）: `docs/video-production-research.md`
 
 ## 生成パイプライン（設計仕様）
 - 情報収集: `docs/information-gathering.md`
@@ -18,7 +19,10 @@
 
 - LangGraph topology: `docs/implementation/langgraph-topology.md`
 - Agent roles & prompts: `docs/implementation/agent-roles-and-prompts.md`
+- Assistant tooling（Claude/Codex）: `docs/implementation/assistant-tooling.md`
 - Entrypoint (/toc-run): `docs/implementation/entrypoint.md`
+- Entrypoint (/toc-scene-series): `docs/implementation/scene-series-entrypoint.md`
+- Entrypoint (/toc-immersive-ride): `docs/implementation/immersive-ride-entrypoint.md`
 - Scene loop: `docs/implementation/scene-loop.md`
 - Video integration: `docs/implementation/video-integration.md`
 - Orchestration logging: `docs/implementation/orchestration-logging.md`

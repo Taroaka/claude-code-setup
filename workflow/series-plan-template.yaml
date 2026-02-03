@@ -1,0 +1,16 @@
+# Scene-series plan template (Q&A per scene)
+series_plan_metadata:
+  topic: "<topic>"
+  source_story: "output/<topic>_<timestamp>/story.md"
+  source_script: "output/<topic>_<timestamp>/script.md"
+  created_at: "<ISO8601>"
+  min_seconds: 30
+  max_seconds: 60
+
+scenes:
+  - scene_id: 1
+    main_text: "string"
+    question: "string"
+    target_seconds: 30
+    notes: ""
+

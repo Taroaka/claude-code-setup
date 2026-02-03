@@ -3,3 +3,9 @@
 # langchain
 # langgraph
 # psycopg[binary]
+
+# Google GenAI SDK (official) for Veo 3.1 first/last frame video generation
+google-genai
+
+# YAML parsing (used by scripts and E2E runner)
+pyyaml

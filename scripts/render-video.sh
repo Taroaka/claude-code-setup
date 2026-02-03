@@ -12,6 +12,7 @@ Usage:
     [--bgm bgm.mp3] [--bgm-volume 0.3] \
     [--audio mixed_audio.m4a] \
     [--srt subtitles.srt] \
+    [--fps 24] [--size 1280x720] \
     [--reencode] \
     --out output.mp4
 
@@ -33,6 +34,8 @@ srt=""
 out=""
 bgm_volume="0.3"
 reencode="false"
+fps=""
+size=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -50,6 +53,10 @@ while [[ $# -gt 0 ]]; do
       audio="$2"; shift 2 ;;
     --srt)
       srt="$2"; shift 2 ;;
+    --fps)
+      fps="$2"; shift 2 ;;
+    --size)
+      size="$2"; shift 2 ;;
     --reencode)
       reencode="true"; shift 1 ;;
     --out)
@@ -88,7 +95,12 @@ trap 'rm -rf "$workdir"' EXIT
 
 concat_video="$workdir/concat.mp4"
 
-if [[ "$reencode" == "true" ]]; then
+need_filter="false"
+if [[ -n "$fps" || -n "$size" || -n "$srt" ]]; then
+  need_filter="true"
+fi
+
+if [[ "$reencode" == "true" || "$need_filter" == "true" ]]; then
   ffmpeg -hide_banner -y -f concat -safe 0 -i "$clip_list" \
     -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p \
     "$concat_video"
@@ -120,15 +132,41 @@ fi
 video_with_audio="$workdir/video_with_audio.mp4"
 
 if [[ -f "$mixed_audio" ]]; then
-  ffmpeg -hide_banner -y -i "$concat_video" -i "$mixed_audio" -c:v copy -c:a aac -shortest "$video_with_audio"
+  # Always map the audio from the mixed track (ignore any audio embedded in clips).
+  ffmpeg -hide_banner -y -i "$concat_video" -i "$mixed_audio" -map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -shortest "$video_with_audio"
 else
   cp "$concat_video" "$video_with_audio"
 fi
 
+final_filter=""
+if [[ -n "$size" ]]; then
+  w="${size%x*}"
+  h="${size#*x}"
+  if [[ -z "$final_filter" ]]; then
+    final_filter="scale=${w}:${h}"
+  else
+    final_filter="${final_filter},scale=${w}:${h}"
+  fi
+fi
+if [[ -n "$fps" ]]; then
+  if [[ -z "$final_filter" ]]; then
+    final_filter="fps=${fps}"
+  else
+    final_filter="${final_filter},fps=${fps}"
+  fi
+fi
 if [[ -n "$srt" ]]; then
+  if [[ -z "$final_filter" ]]; then
+    final_filter="subtitles=${srt}:force_style='FontSize=24,PrimaryColour=&HFFFFFF'"
+  else
+    final_filter="${final_filter},subtitles=${srt}:force_style='FontSize=24,PrimaryColour=&HFFFFFF'"
+  fi
+fi
+
+if [[ -n "$final_filter" ]]; then
   ffmpeg -hide_banner -y -i "$video_with_audio" \
-    -vf "subtitles=${srt}:force_style='FontSize=24,PrimaryColour=&HFFFFFF'" \
-    -c:v libx264 -preset medium -crf 18 -c:a aac "$out"
+    -vf "$final_filter" \
+    -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p -c:a aac "$out"
 else
   cp "$video_with_audio" "$out"
 fi

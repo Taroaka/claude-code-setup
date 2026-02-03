@@ -19,7 +19,7 @@ future cloud deployment. It corresponds to todo item 1 in `todo.txt`.
 | Storage | Filesystem object store + PostgreSQL metadata DB | Durable metadata |
 | Job queue | In-process async queue | Simple and sufficient for MVP |
 | State management | Append-only `state.txt` in project folder (no DB checkpoints) | Human-readable recovery |
-| Providers | LLM via LangChain; image/video/TTS TBD (pluggable) | Avoid vendor lock-in |
+| Providers | LLM via LangChain; image=Google Nano Banana Pro; video=Google Veo 3.1; TTS=ElevenLabs | Avoid vendor lock-in |
 | API boundary | Claude Code entrypoint (slash command) | Keep surface area small |
 
 ## Component diagram
@@ -91,7 +91,9 @@ graph TD
 
 - Provider interfaces for image, video, TTS, and LLM.
 - LLM integration uses LangChain.
-- Image/video/TTS providers are TBD (keep pluggable, use mock locally).
+- Image: Google Nano Banana Pro（Gemini Image / `gemini-3-pro-image-preview`）
+- Video: Google Veo 3.1（`veo-3.1-generate-preview`）
+- TTS: ElevenLabs
 - Swap providers via configuration without changing orchestration logic.
 
 ## API boundaries / module ownership
@@ -113,5 +115,5 @@ graph TD
 ## Open questions
 
 - Which cloud provider to standardize on (AWS/GCP/etc.)?
-- Which production providers for image/video/TTS?
+- ElevenLabs の voice/model/output_format の標準（日本語品質/速度/コスト）
 - Preferred trade-off: cost vs quality vs latency?

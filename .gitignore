@@ -26,6 +26,13 @@ venv/
 # Logs
 *.log
 
+# multi-agent runtime artifacts (symlinked to improve_claude_code/*)
+queue/
+instructions/
+memory/
+status/
+dashboard.md
+
 # Build outputs
 dist/
 build/

@@ -30,9 +30,9 @@ state:
     separator: "---"
 
 providers:
-  image: tbd
-  video: tbd
-  tts: tbd
+  image: google_nanobanana_pro
+  video: google_veo_3_1
+  tts: elevenlabs
   llm: langchain
 
 api:

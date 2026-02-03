@@ -18,6 +18,8 @@
 - `visual_prompt`
 - `duration_seconds`
 - `constraints`
+  - （任意）参照画像: `references[]`
+  - （任意）動画の開始/終了フレーム: `first_frame`, `last_frame`
 
 出力（scene単位）:
 - `assets/scenes/scene{n}_base.png`
@@ -29,7 +31,10 @@
 
 ## プレースホルダ（MVP）
 
-本番プロバイダ未決定のため、まずは placeholder でE2Eを通す。
+プロバイダは決定済み（Google Nano Banana Pro / Veo 3.1）。ただしMVPでは:
+
+- placeholder でE2Eを通す（`scripts/generate-placeholder-assets.py`）
+- 生成APIで素材化する（`scripts/generate-assets-from-manifest.py`）
 
 ## 品質ゲート（最小）
 

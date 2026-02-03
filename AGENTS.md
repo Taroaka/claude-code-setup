@@ -9,9 +9,18 @@
 
 ## 起動（Claude Code slash command）
 
-- 起点: `/toc-run`
-- 使い方（想定）: `/toc-run "topic" [--dry-run] [--config <path>]`
-- コマンド説明: `.claude/commands/toc/toc-run.md`
+- 起点:
+  - `/toc-run`（標準フロー）
+  - `/toc-scene-series`（sceneごとのQ&A動画を複数本生成）
+  - `/toc-immersive-ride`（没入型：First-person POV 実写ライド体験の単発動画）
+- 使い方（想定）:
+  - `/toc-run "topic" [--dry-run] [--config <path>]`
+  - `/toc-scene-series "topic" [--dry-run] [--min-seconds 30] [--max-seconds 60] [--scene-ids 1,2,3]`
+  - `/toc-immersive-ride --topic "topic" [--stage video|script] [--config <path>]`
+- コマンド説明:
+  - `.claude/commands/toc/toc-run.md`
+  - `.claude/commands/toc/toc-scene-series.md`
+  - `.claude/commands/toc/toc-immersive-ride.md`
 - 実行手順（全体）: `docs/how-to-run.md`
 
 ## state 管理（ファイル）
@@ -44,6 +53,14 @@ state は **コード内の状態ではなく**、プロジェクトフォルダ
   `requirements.md` → `design.md` → `tasklist.md` の順で固める（必要なら各段階で承認を取る）
 - 実装は **設計に沿って最小変更**で行う（依頼されたこと以外はしない）
 - 変更後は可能な範囲で検証（例: `python -m compileall .`、CI想定のdry-runなど）
+
+## 会話時の報告（作業完了時）
+
+- 編集したファイルごとに「何をどう変えたか」を丁寧に伝える（要点→補足の順）
+- そのファイルの置き場所（ディレクトリ）がこの構造で妥当な理由を、`docs/` / `.steering/` / `workflow/` などの役割と照らして説明する
+- もし妥当でない/迷う場合は、代替案（置き場所候補）と、今回移動しない判断理由も書く
+- 可能なら、実行した検証コマンドと結果も添える
+- 文章は機械的な箇条書きだけでなく、短い会話調の説明（「今回は〜なので〜に置きました」）を混ぜて読みやすくする
 
 ## Secrets / env
 

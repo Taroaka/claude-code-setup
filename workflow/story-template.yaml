@@ -29,6 +29,13 @@ script:
       phase: "opening|development|ordeal|transformation|ending"
       narration: "string"
       visual: "string"
+      # Mapping back to research for traceability (運用: idが無い場合は短い引用でも可)
+      research_refs: ["research.engagement.hooks[0]", "research.story_baseline.beat_sheet[0]"]
+    - scene_id: 2
+      phase: "opening|development|ordeal|transformation|ending"
+      narration: "string"
+      visual: "string"
+      research_refs: []
 
 engagement_design:
   primary_hook:

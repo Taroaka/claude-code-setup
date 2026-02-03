@@ -3,7 +3,7 @@
 本書は `todo.txt` の 15) Documentation に対応する。
 
 ## 前提
-- 起点は Claude Code の slash command（例: `/toc-run`）
+- 起点は Claude Code の slash command（例: `/toc-run`, `/toc-scene-series`, `/toc-immersive-ride`）
 - 成果物は `output/<topic>_<timestamp>/` に生成される
 - state は `output/<topic>_<timestamp>/state.txt`（追記型）
 
@@ -16,6 +16,15 @@
 docker-compose up --build
 ```
 
+## セットアップ（uv / local）
+
+uv で依存を揃える場合（.venv を作って同期）:
+
+```bash
+python -m pip install -U uv
+scripts/uv-sync.sh
+```
+
 ## 実行（想定）
 
 Claude Code で以下を実行:
@@ -24,7 +33,19 @@ Claude Code で以下を実行:
 /toc-run "桃太郎" --dry-run
 ```
 
-## 期待される出力
+sceneごとにQ&A動画を複数本作る場合:
+
+```
+/toc-scene-series "桃太郎" --min-seconds 30 --max-seconds 60
+```
+
+没入型（First-person POV）実写ライド体験の単発動画:
+
+```text
+/toc-immersive-ride --topic "桃太郎"
+```
+
+## 期待される出力（/toc-run）
 
 ```
 output/<topic>_<timestamp>/
@@ -38,11 +59,50 @@ output/<topic>_<timestamp>/
   logs/
 ```
 
+## 期待される出力（/toc-scene-series）
+
+```
+output/<topic>_<timestamp>/
+  state.txt
+  research.md
+  story.md
+  series_plan.md
+  scenes/
+    scene01/
+      evidence.md
+      script.md
+      video_manifest.md
+      assets/
+      video.mp4
+    scene02/
+      ...
+```
+
 ## 生成（画像/動画/TTS）について
 
-- 画像/動画/TTS の本番プロバイダは未決定（TBD）
-- 当面はプレースホルダ生成（モック）でフローを検証する
+- 画像: Google Nano Banana Pro（Gemini Image / `gemini-3-pro-image-preview`）
+- 画像（代替）: SeaDream / Seedream 4.5（`tool: "seadream"` + `SEADREAM_*`）
+- 動画: Google Veo 3.1（`veo-3.1-generate-preview`）
+- TTS: ElevenLabs
+- 当面は `video_manifest.md` を入力に素材生成→結合でフローを検証する
 - 具体は `docs/implementation/video-integration.md` を参照
+
+例（`momotaro` のマニフェストから素材生成→結合）:
+
+```bash
+python scripts/generate-assets-from-manifest.py \
+  --manifest output/momotaro_20260110_1700/video_manifest.md \
+  # --skip-audio を外すと ElevenLabs でナレーション生成も行う
+
+python scripts/build-clip-lists.py \
+  --manifest output/momotaro_20260110_1700/video_manifest.md \
+  --out-dir output/momotaro_20260110_1700
+
+scripts/render-video.sh \
+  --clip-list output/momotaro_20260110_1700/video_clips.txt \
+  --narration-list output/momotaro_20260110_1700/video_narration_list.txt \
+  --out output/momotaro_20260110_1700/video.mp4
+```
 
 ## state運用
 

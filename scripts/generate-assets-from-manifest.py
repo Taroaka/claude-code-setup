@@ -1,0 +1,1330 @@
+#!/usr/bin/env python3
+"""
+Generate assets (image/video/audio) from a `video_manifest.md`.
+
+- Image: Google Gemini Image (Nano Banana Pro = gemini-3-pro-image-preview)
+- Video: Google Veo 3.1 (veo-3.1-generate-preview)
+
+Audio (TTS):
+- ElevenLabs Text-to-Speech API
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
+import tempfile
+import time
+from dataclasses import dataclass
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from toc.env import load_env_files
+from toc.http import HttpError, request_bytes
+from toc.providers.elevenlabs import ElevenLabsClient, ElevenLabsConfig
+from toc.providers.gemini import GeminiClient, GeminiConfig
+from toc.providers.seadream import SeaDreamClient, SeaDreamConfig
+
+
+ALLOWED_VEO_DURATIONS = (4, 6, 8)
+
+
+@dataclass
+class SceneSpec:
+    scene_id: int
+    timestamp: str | None
+    image_tool: str | None
+    image_prompt: str | None
+    image_output: str | None
+    image_references: list[str]
+    image_aspect_ratio: str | None
+    image_size: str | None
+    video_tool: str | None
+    video_input_image: str | None
+    video_first_frame: str | None
+    video_last_frame: str | None
+    video_motion_prompt: str | None
+    video_output: str | None
+    narration_tool: str | None
+    narration_text: str | None
+    narration_output: str | None
+    narration_normalize_to_scene_duration: bool
+
+
+def _env(name: str, default: str | None = None) -> str | None:
+    v = os.environ.get(name)
+    if v is None or v == "":
+        return default
+    return v
+
+
+def extract_yaml_block(text: str) -> str:
+    m = re.search(r"```yaml\s*\n(.*?)\n```", text, flags=re.DOTALL)
+    if not m:
+        raise SystemExit("No ```yaml ... ``` block found in manifest markdown.")
+    return m.group(1)
+
+
+def parse_timecode(s: str) -> int:
+    s = s.strip()
+    parts = s.split(":")
+    if len(parts) == 2:
+        mm, ss = parts
+        return int(mm) * 60 + int(ss)
+    if len(parts) == 3:
+        hh, mm, ss = parts
+        return int(hh) * 3600 + int(mm) * 60 + int(ss)
+    raise ValueError(f"Unsupported timecode: {s}")
+
+
+def duration_from_timestamp_range(ts_range: str | None, default_seconds: int) -> int:
+    if not ts_range:
+        return default_seconds
+    raw = ts_range.strip().strip('"').strip("'")
+    if "-" not in raw:
+        return default_seconds
+    start_s, end_s = raw.split("-", 1)
+    try:
+        start = parse_timecode(start_s)
+        end = parse_timecode(end_s)
+    except ValueError:
+        return default_seconds
+    if end <= start:
+        return default_seconds
+    return end - start
+
+
+def _parse_yaml_scalar(value: str) -> str | None:
+    v = value.strip()
+    if v == "" or v.lower() == "null":
+        return None
+    if (v.startswith('"') and v.endswith('"')) or (v.startswith("'") and v.endswith("'")):
+        return v[1:-1]
+    return v
+
+
+def parse_manifest_yaml(yaml_text: str) -> tuple[dict, list[SceneSpec]]:
+    metadata: dict = {}
+    scenes: list[SceneSpec] = []
+    current: SceneSpec | None = None
+
+    stack: list[tuple[int, str]] = []
+
+    def push(indent: int, key: str, *, is_list_item: bool) -> None:
+        nonlocal stack
+        # Support both styles:
+        #   scenes:
+        #     - scene_id: 1   (indented sequence)
+        #   scenes:
+        #   - scene_id: 1     (indentless sequence; keep parent key on stack)
+        while stack and (indent < stack[-1][0] or (not is_list_item and indent <= stack[-1][0])):
+            stack.pop()
+        stack.append((indent, key))
+
+    lines = yaml_text.splitlines()
+    i = 0
+    while i < len(lines):
+        raw = lines[i].rstrip("\n")
+        if not raw.strip() or raw.lstrip().startswith("#"):
+            i += 1
+            continue
+
+        indent = len(raw) - len(raw.lstrip(" "))
+        stripped = raw.strip()
+        is_list_item = stripped.startswith("- ")
+        if is_list_item:
+            stripped = stripped[2:].strip()
+
+        if ":" not in stripped:
+            i += 1
+            continue
+
+        key, value = stripped.split(":", 1)
+        key = key.strip()
+        value = value.strip()
+
+        push(indent, key, is_list_item=is_list_item)
+        context_keys = [k for _, k in stack]
+
+        # Block scalar (| / >)
+        if value in {"|", "|-", "|+", ">", ">-", ">+"}:
+            block_lines: list[str] = []
+            j = i + 1
+            block_indent: int | None = None
+            while j < len(lines):
+                nxt = lines[j].rstrip("\n")
+                if block_indent is None:
+                    if nxt.strip() == "":
+                        block_lines.append("")
+                        j += 1
+                        continue
+                    block_indent = len(nxt) - len(nxt.lstrip(" "))
+
+                nxt_indent = len(nxt) - len(nxt.lstrip(" "))
+                if nxt.strip() != "" and nxt_indent < block_indent:
+                    break
+                if nxt.strip() == "" and nxt_indent < block_indent:
+                    break
+
+                if nxt.strip() == "":
+                    block_lines.append("")
+                else:
+                    block_lines.append(nxt[block_indent:])
+                j += 1
+
+            value = "\n".join(block_lines).rstrip()
+            i = j
+        else:
+            i += 1
+
+        # metadata
+        if "video_metadata" in context_keys:
+            if key in {"topic", "aspect_ratio", "resolution"}:
+                metadata[key] = _parse_yaml_scalar(value)
+            continue
+
+        # new scene
+        if key == "scene_id" and "scenes" in context_keys:
+            if current:
+                scenes.append(current)
+            try:
+                scene_id = int(_parse_yaml_scalar(value) or "0")
+            except ValueError:
+                scene_id = len(scenes) + 1
+            current = SceneSpec(
+                scene_id=scene_id,
+                timestamp=None,
+                image_tool=None,
+                image_prompt=None,
+                image_output=None,
+                image_references=[],
+                image_aspect_ratio=None,
+                image_size=None,
+                video_tool=None,
+                video_input_image=None,
+                video_first_frame=None,
+                video_last_frame=None,
+                video_motion_prompt=None,
+                video_output=None,
+                narration_tool=None,
+                narration_text=None,
+                narration_output=None,
+                narration_normalize_to_scene_duration=True,
+            )
+            continue
+
+        if not current:
+            continue
+
+        # per-scene fields
+        if key == "timestamp" and "scenes" in context_keys:
+            current.timestamp = _parse_yaml_scalar(value)
+            continue
+
+        # image generation
+        if "image_generation" in context_keys:
+            if key == "tool":
+                current.image_tool = _parse_yaml_scalar(value)
+            elif key == "prompt":
+                current.image_prompt = value if "\n" in value else (_parse_yaml_scalar(value) or value)
+            elif key == "output":
+                current.image_output = _parse_yaml_scalar(value)
+            elif key == "references":
+                # Minimal YAML: support inline list syntax like [a, b] only.
+                raw = value.strip()
+                if raw.startswith("[") and raw.endswith("]"):
+                    inner = raw[1:-1].strip()
+                    if inner:
+                        items = [x.strip().strip('"').strip("'") for x in inner.split(",")]
+                        current.image_references = [x for x in items if x]
+                else:
+                    # Multi-line list parsing is not supported by this minimal parser.
+                    current.image_references = []
+            elif key == "aspect_ratio":
+                current.image_aspect_ratio = _parse_yaml_scalar(value)
+            elif key == "image_size":
+                current.image_size = _parse_yaml_scalar(value)
+            continue
+
+        # video generation
+        if "video_generation" in context_keys:
+            if key == "tool":
+                current.video_tool = _parse_yaml_scalar(value)
+            elif key == "input_image":
+                current.video_input_image = _parse_yaml_scalar(value)
+            elif key == "first_frame":
+                current.video_first_frame = _parse_yaml_scalar(value)
+            elif key == "last_frame":
+                current.video_last_frame = _parse_yaml_scalar(value)
+            elif key == "motion_prompt":
+                current.video_motion_prompt = value if "\n" in value else (_parse_yaml_scalar(value) or value)
+            elif key == "output":
+                current.video_output = _parse_yaml_scalar(value)
+            continue
+
+        # narration
+        if "narration" in context_keys:
+            if key == "tool":
+                current.narration_tool = _parse_yaml_scalar(value)
+            elif key == "text":
+                current.narration_text = value if "\n" in value else (_parse_yaml_scalar(value) or value)
+            elif key == "output":
+                current.narration_output = _parse_yaml_scalar(value)
+            elif key == "normalize_to_scene_duration":
+                raw = (_parse_yaml_scalar(value) or "").strip().lower()
+                if raw in {"false", "no", "0"}:
+                    current.narration_normalize_to_scene_duration = False
+            continue
+
+    if current:
+        scenes.append(current)
+
+    return metadata, scenes
+
+
+def _guess_image_suffix(mime_type: str | None) -> str:
+    if not mime_type:
+        return ".bin"
+    mt = mime_type.lower()
+    if mt == "image/png":
+        return ".png"
+    if mt == "image/jpeg":
+        return ".jpg"
+    if mt == "image/webp":
+        return ".webp"
+    return ".bin"
+
+
+def _run(cmd: list[str]) -> None:
+    subprocess.run(cmd, check=True)
+
+
+def _ffmpeg_write_silence_mp3(out_path: Path, duration_seconds: int, force: bool) -> None:
+    if out_path.exists() and not force:
+        return
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    _run(
+        [
+            "ffmpeg",
+            "-hide_banner",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "anullsrc=r=44100:cl=mono",
+            "-t",
+            str(duration_seconds),
+            "-q:a",
+            "9",
+            "-acodec",
+            "libmp3lame",
+            str(out_path),
+        ]
+    )
+
+
+def _ffmpeg_normalize_mp3(src_path: Path, out_path: Path, duration_seconds: int | None, force: bool) -> None:
+    if out_path.exists() and not force:
+        return
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    cmd = [
+        "ffmpeg",
+        "-hide_banner",
+        "-y",
+        "-i",
+        str(src_path),
+        "-ar",
+        "44100",
+        "-ac",
+        "1",
+        "-b:a",
+        "128k",
+        "-codec:a",
+        "libmp3lame",
+    ]
+    if duration_seconds is not None:
+        cmd += ["-af", "apad", "-t", str(duration_seconds)]
+    cmd.append(str(out_path))
+    _run(cmd)
+
+
+def generate_elevenlabs_tts(
+    *,
+    client: ElevenLabsClient | None,
+    voice_id: str,
+    model_id: str,
+    output_format: str,
+    text: str,
+    out_path: Path,
+    duration_seconds: int | None,
+    force: bool,
+    request_log_path: Path | None,
+    dry_run: bool,
+) -> None:
+    if out_path.exists() and not force:
+        return
+
+    payload: dict = {
+        "text": text,
+        "model_id": model_id,
+        "voice_settings": {
+            "stability": 0.35,
+            "similarity_boost": 0.75,
+            "style": 0.0,
+            "use_speaker_boost": True,
+        },
+    }
+
+    if request_log_path:
+        request_log_path.parent.mkdir(parents=True, exist_ok=True)
+        request_log_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    if dry_run:
+        print(f"[dry-run] AUDIO {out_path} <- elevenlabs voice={voice_id} model={model_id} fmt={output_format}")
+        return
+
+    if client is None:
+        raise SystemExit("ElevenLabs client not configured (missing ELEVENLABS_API_KEY / ELEVENLABS_VOICE_ID).")
+
+    try:
+        audio = client.tts(
+            text=text,
+            voice_id=voice_id,
+            model_id=model_id,
+            output_format=output_format,
+            voice_settings=payload["voice_settings"],
+        )
+    except HttpError as e:
+        raise SystemExit(str(e)) from e
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp:
+        tmp_path = Path(tmp.name)
+        tmp.write(audio)
+
+    try:
+        try:
+            _ffmpeg_normalize_mp3(tmp_path, out_path, duration_seconds, force=True)
+        except FileNotFoundError:
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            out_path.write_bytes(audio)
+    finally:
+        try:
+            tmp_path.unlink(missing_ok=True)
+        except Exception:
+            pass
+
+
+def _plan_veo_segments(desired_seconds: int) -> tuple[list[int], int | None]:
+    """
+    Return (segments, trim_to_seconds).
+
+    Veo only supports a small discrete set of durations per request; if the desired duration
+    isn't directly supported, we generate multiple segments and trim the concatenation.
+    """
+    if desired_seconds <= 0:
+        return [6], 6
+
+    if desired_seconds in ALLOWED_VEO_DURATIONS:
+        return [desired_seconds], None
+
+    limit = desired_seconds + max(ALLOWED_VEO_DURATIONS)
+    best: dict[int, list[int]] = {0: []}
+    for total in range(limit + 1):
+        if total not in best:
+            continue
+        for d in ALLOWED_VEO_DURATIONS:
+            nxt = total + d
+            if nxt > limit:
+                continue
+            cand = best[total] + [d]
+            if nxt not in best or len(cand) < len(best[nxt]):
+                best[nxt] = cand
+
+    best_total = None
+    best_segments: list[int] | None = None
+    for total in range(desired_seconds, limit + 1):
+        segs = best.get(total)
+        if not segs:
+            continue
+        if best_total is None:
+            best_total = total
+            best_segments = segs
+            continue
+        overshoot = total - desired_seconds
+        best_overshoot = best_total - desired_seconds
+        if overshoot < best_overshoot:
+            best_total = total
+            best_segments = segs
+        elif overshoot == best_overshoot and best_segments is not None and len(segs) < len(best_segments):
+            best_total = total
+            best_segments = segs
+
+    if not best_segments:
+        return [6], desired_seconds
+
+    if best_total == desired_seconds:
+        return best_segments, None
+    return best_segments, desired_seconds
+
+
+def _ffmpeg_concat_videos(inputs: list[Path], out_path: Path) -> None:
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        list_path = Path(tmpdir) / "concat.txt"
+        lines = [f"file '{p.as_posix()}'" for p in inputs]
+        list_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        _run(
+            [
+                "ffmpeg",
+                "-hide_banner",
+                "-y",
+                "-f",
+                "concat",
+                "-safe",
+                "0",
+                "-i",
+                str(list_path),
+                "-c",
+                "copy",
+                str(out_path),
+            ]
+        )
+
+
+def _ffmpeg_trim_video(src: Path, out_path: Path, duration_seconds: int) -> None:
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    _run(
+        [
+            "ffmpeg",
+            "-hide_banner",
+            "-y",
+            "-i",
+            str(src),
+            "-t",
+            str(duration_seconds),
+            "-c:v",
+            "libx264",
+            "-preset",
+            "medium",
+            "-crf",
+            "18",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
+            str(out_path),
+        ]
+    )
+
+
+def _ffmpeg_extract_frame_from_end(src: Path, out_path: Path, *, seconds_from_end: float, force: bool) -> None:
+    if out_path.exists() and not force:
+        return
+    # ffmpeg can fail to output any frame if we seek *too* close to EOF.
+    # For 24fps content, 1 frame ~= 0.0417s; treat that as "last frame" in practice.
+    min_seek = 1.0 / 24.0
+    if seconds_from_end <= 0:
+        seconds_from_end = min_seek
+    if seconds_from_end < min_seek:
+        seconds_from_end = min_seek
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    _run(
+        [
+            "ffmpeg",
+            "-hide_banner",
+            "-y",
+            "-sseof",
+            f"-{seconds_from_end}",
+            "-i",
+            str(src),
+            "-frames:v",
+            "1",
+            "-q:v",
+            "2",
+            str(out_path),
+        ]
+    )
+
+
+def _ffmpeg_extract_frame_from_end_best_effort(
+    src: Path, out_path: Path, *, seconds_from_end: float, force: bool
+) -> Path:
+    """
+    Extract a "near end" frame reliably.
+
+    ffmpeg can exit 0 but still write an empty file if the seek is too close to EOF.
+    We retry with progressively larger offsets.
+    """
+    if out_path.exists() and not force and out_path.stat().st_size > 0:
+        return out_path
+
+    min_seek = 1.0 / 24.0
+    candidates: list[float] = [max(float(seconds_from_end), min_seek)]
+    candidates += [min_seek, 0.05, 0.1, 0.25, 0.5, 1.0]
+
+    last_err: Exception | None = None
+    for sec in candidates:
+        try:
+            _ffmpeg_extract_frame_from_end(src, out_path, seconds_from_end=sec, force=True)
+            if out_path.exists() and out_path.stat().st_size > 0:
+                return out_path
+            try:
+                out_path.unlink(missing_ok=True)
+            except Exception:
+                pass
+        except Exception as e:
+            last_err = e
+            try:
+                out_path.unlink(missing_ok=True)
+            except Exception:
+                pass
+            continue
+
+    if last_err:
+        raise last_err
+    raise SystemExit(f"Failed to extract chaining frame from: {src}")
+
+
+def generate_gemini_image(
+    *,
+    client: GeminiClient | None,
+    model: str,
+    prompt: str,
+    aspect_ratio: str,
+    image_size: str,
+    reference_images: list[Path] | None,
+    out_path: Path,
+    force: bool,
+    log_path: Path | None,
+    dry_run: bool,
+) -> None:
+    if out_path.exists() and not force:
+        return
+
+    if dry_run:
+        print(f"[dry-run] IMAGE {out_path} <- {model} ({aspect_ratio}, {image_size})")
+        return
+
+    if client is None:
+        raise SystemExit("Gemini client not configured (missing GEMINI_API_KEY).")
+
+    try:
+        image_bytes, mime_type, resp = client.generate_image(
+            prompt=prompt,
+            aspect_ratio=aspect_ratio,
+            image_size=image_size,
+            reference_images=reference_images,
+            model=model,
+        )
+    except (HttpError, ValueError) as e:
+        raise SystemExit(str(e)) from e
+
+    if log_path:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        redacted = json.loads(json.dumps(resp))
+        # redact base64 payloads
+        for cand in redacted.get("candidates", []) or []:
+            for part in (cand.get("content", {}) or {}).get("parts", []) or []:
+                inline = part.get("inlineData") or part.get("inline_data")
+                if inline and "data" in inline:
+                    inline["data"] = f"<redacted {len(inline['data'])} chars>"
+        log_path.write_text(json.dumps(redacted, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    suffix = _guess_image_suffix(mime_type)
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        tmp_path = Path(tmp.name)
+        tmp.write(image_bytes)
+
+    try:
+        try:
+            _run(
+                [
+                    "ffmpeg",
+                    "-hide_banner",
+                    "-y",
+                    "-i",
+                    str(tmp_path),
+                    "-frames:v",
+                    "1",
+                    "-update",
+                    "1",
+                    str(out_path),
+                ]
+            )
+        except FileNotFoundError:
+            out_path.write_bytes(image_bytes)
+    finally:
+        try:
+            tmp_path.unlink(missing_ok=True)
+        except Exception:
+            pass
+
+
+def generate_seadream_image(
+    *,
+    client: SeaDreamClient | None,
+    model: str,
+    prompt: str,
+    size: str,
+    out_path: Path,
+    force: bool,
+    log_path: Path | None,
+    dry_run: bool,
+) -> None:
+    if out_path.exists() and not force:
+        return
+
+    if dry_run:
+        print(f"[dry-run] IMAGE {out_path} <- {model} (size={size})")
+        return
+
+    if client is None:
+        raise SystemExit("SeaDream client not configured (missing SEADREAM_API_KEY).")
+
+    try:
+        image_bytes, mime_type, resp = client.generate_image(prompt=prompt, size=size, model=model)
+    except (HttpError, ValueError) as e:
+        raise SystemExit(str(e)) from e
+
+    if log_path:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        redacted = json.loads(json.dumps(resp))
+        for item in redacted.get("data", []) or []:
+            if isinstance(item, dict) and "b64_json" in item:
+                item["b64_json"] = "<redacted>"
+        log_path.write_text(json.dumps(redacted, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    mime_type = mime_type or "image/png"
+    suffix = _guess_image_suffix(mime_type)
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        tmp_path = Path(tmp.name)
+        tmp.write(image_bytes)
+
+    try:
+        try:
+            _run(
+                [
+                    "ffmpeg",
+                    "-hide_banner",
+                    "-y",
+                    "-i",
+                    str(tmp_path),
+                    "-frames:v",
+                    "1",
+                    "-update",
+                    "1",
+                    str(out_path),
+                ]
+            )
+        except FileNotFoundError:
+            out_path.write_bytes(image_bytes)
+    finally:
+        try:
+            tmp_path.unlink(missing_ok=True)
+        except Exception:
+            pass
+
+
+def generate_veo_video(
+    *,
+    client: GeminiClient | None,
+    model: str,
+    prompt: str,
+    negative_prompt: str,
+    duration_seconds: int,
+    aspect_ratio: str,
+    resolution: str,
+    input_image: Path | None,
+    last_frame_image: Path | None,
+    reference_images: list[Path] | None,
+    out_path: Path,
+    poll_every: float,
+    timeout_seconds: float,
+    force: bool,
+    log_path: Path | None,
+    dry_run: bool,
+) -> None:
+    if out_path.exists() and not force:
+        return
+
+    if dry_run:
+        kind = "F2F" if (input_image and last_frame_image) else ("I2V" if input_image else "T2V")
+        print(f"[dry-run] VIDEO({kind}) {out_path} <- {model} ({duration_seconds}s, {aspect_ratio}, {resolution})")
+        return
+
+    # Use the official Google GenAI Python SDK for Veo.
+    # This supports first-frame image + lastFrame constraint via config.
+    try:
+        from google import genai  # type: ignore
+        from google.genai import types  # type: ignore
+    except Exception as e:
+        raise SystemExit(
+            "google-genai is required for Veo video generation.\n"
+            "Install: pip install google-genai"
+        ) from e
+
+    api_key = _env("GEMINI_API_KEY")
+    if not api_key:
+        raise SystemExit("Missing GEMINI_API_KEY (required for Veo video generation).")
+
+    if input_image is None:
+        raise SystemExit("Veo image-to-video requires a first-frame image (input_image).")
+
+    client_sdk = genai.Client(api_key=api_key)
+
+    first = types.Image.from_file(location=str(input_image))
+    last = types.Image.from_file(location=str(last_frame_image)) if last_frame_image is not None else None
+
+    refs_cfg: list[types.VideoGenerationReferenceImage] | None = None
+    # Some fast/cheap variants may not support reference images; keep this best-effort.
+    allow_reference_images = "fast" not in (model or "").lower()
+    if reference_images and allow_reference_images:
+        refs_cfg = []
+        for p in reference_images:
+            refs_cfg.append(
+                types.VideoGenerationReferenceImage(
+                    image=types.Image.from_file(location=str(p)),
+                    reference_type=types.VideoGenerationReferenceType.ASSET,
+                )
+            )
+
+    cfg = types.GenerateVideosConfig(
+        number_of_videos=1,
+        duration_seconds=int(duration_seconds),
+        aspect_ratio=aspect_ratio,
+        resolution=resolution,
+        last_frame=last,
+        negative_prompt=(negative_prompt.strip() or None),
+        reference_images=refs_cfg,
+    )
+
+    op = client_sdk.models.generate_videos(model=model, prompt=prompt, image=first, config=cfg)
+
+    deadline = time.time() + float(timeout_seconds)
+    while not getattr(op, "done", False):
+        if time.time() > deadline:
+            raise SystemExit(f"Timed out waiting for Veo operation: {getattr(op, 'name', '<unknown>')}")
+        time.sleep(float(poll_every))
+        op = client_sdk.operations.get(op)
+
+    if getattr(op, "error", None):
+        raise SystemExit(f"Veo operation failed: {op.error}")
+
+    if log_path:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            log_path.write_text(json.dumps(op.model_dump(), ensure_ascii=False, indent=2), encoding="utf-8")  # type: ignore[attr-defined]
+        except Exception:
+            log_path.write_text(str(op), encoding="utf-8")
+
+    resp = getattr(op, "response", None) or getattr(op, "result", None)
+    if resp is None:
+        raise SystemExit("Veo operation done but response/result is None.")
+
+    videos = getattr(resp, "generated_videos", None) or getattr(resp, "generatedVideos", None) or []
+    if not videos:
+        filtered_count = getattr(resp, "rai_media_filtered_count", None) or getattr(resp, "raiMediaFilteredCount", None)
+        filtered_reasons = getattr(resp, "rai_media_filtered_reasons", None) or getattr(resp, "raiMediaFilteredReasons", None)
+        raise SystemExit(
+            "Veo operation completed but generated_videos is empty.\n"
+            f"rai_media_filtered_count={filtered_count}\n"
+            f"rai_media_filtered_reasons={filtered_reasons}"
+        )
+
+    video_obj = getattr(videos[0], "video", None)
+    if video_obj is None:
+        raise SystemExit("Veo response missing generated_videos[0].video.")
+
+    raw = getattr(video_obj, "video_bytes", None)
+    if isinstance(raw, str) and raw:
+        import base64
+
+        data = base64.b64decode(raw)
+    elif isinstance(raw, (bytes, bytearray)) and raw:
+        data = bytes(raw)
+    else:
+        uri = getattr(video_obj, "uri", None)
+        if uri:
+            data = request_bytes(url=str(uri), method="GET", headers={"x-goog-api-key": api_key}, timeout_seconds=600.0)
+        else:
+            raise SystemExit("Veo response video has no video_bytes and no uri.")
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_bytes(data)
+
+
+def normalize_tool_name(tool: str | None) -> str:
+    if not tool:
+        return ""
+    return tool.strip().lower().replace(" ", "_")
+
+
+def resolve_path(base_dir: Path, maybe_path: str | None) -> Path | None:
+    if not maybe_path:
+        return None
+    p = Path(maybe_path)
+    return p if p.is_absolute() else (base_dir / p)
+
+
+def main() -> None:
+    load_env_files(repo_root=REPO_ROOT)
+
+    parser = argparse.ArgumentParser(description="Generate assets from a video manifest.")
+    parser.add_argument("--manifest", required=True, help="Path to video_manifest.md")
+    parser.add_argument("--base-dir", default=None, help="Resolve relative paths from this dir (default: manifest dir).")
+    parser.add_argument("--force", action="store_true", help="Overwrite existing outputs.")
+    parser.add_argument("--dry-run", action="store_true", help="Plan only (no API calls).")
+
+    parser.add_argument("--skip-images", action="store_true")
+    parser.add_argument("--skip-videos", action="store_true")
+    parser.add_argument("--skip-audio", action="store_true")
+
+    parser.add_argument("--scene-ids", default=None, help='Comma-separated list like "1,3,5" (default: all).')
+
+    # Gemini Image
+    parser.add_argument("--gemini-api-base", default=_env("GEMINI_API_BASE", "https://generativelanguage.googleapis.com/v1beta"))
+    parser.add_argument("--gemini-api-key", default=_env("GEMINI_API_KEY"))
+    parser.add_argument("--gemini-image-model", default=_env("GEMINI_IMAGE_MODEL", "gemini-3-pro-image-preview"))
+    parser.add_argument("--image-size", default="2K")
+    parser.add_argument("--image-aspect-ratio", default=None)
+    parser.add_argument("--image-prompt-prefix", default="", help="Optional text prepended to every image prompt.")
+    parser.add_argument("--image-prompt-suffix", default="", help="Optional text appended to every image prompt.")
+
+    # SeaDream (Seedream 4.5, OpenAI Images compatible)
+    parser.add_argument("--seadream-api-base", default=_env("SEADREAM_API_BASE", "https://ark.ap-southeast.bytepluses.com/api/v3"))
+    parser.add_argument("--seadream-api-key", default=_env("SEADREAM_API_KEY"))
+    parser.add_argument("--seadream-model", default=_env("SEADREAM_MODEL", "seedream-4-5-251128"))
+    parser.add_argument("--seadream-size", default=_env("SEADREAM_SIZE", "1024x1536"))
+
+    # Veo
+    parser.add_argument("--gemini-video-model", default=_env("GEMINI_VIDEO_MODEL", "veo-3.1-fast-generate-preview"))
+    parser.add_argument("--video-resolution", default="720p")
+    parser.add_argument("--video-aspect-ratio", default=None)
+    parser.add_argument("--default-scene-seconds", type=int, default=6)
+    parser.add_argument("--video-prompt-prefix", default="", help="Optional text prepended to every video prompt.")
+    parser.add_argument("--video-prompt-suffix", default="", help="Optional text appended to every video prompt.")
+    parser.add_argument(
+        "--video-negative-prompt",
+        default="",
+        help="Negative prompt for Veo (e.g., 'fade out, crossfade, cut to black').",
+    )
+    parser.add_argument("--poll-every", type=float, default=5.0)
+    parser.add_argument("--timeout-seconds", type=float, default=900.0)
+    parser.add_argument(
+        "--enable-last-frame",
+        action="store_true",
+        help="Try to pass last-frame conditioning to Veo using manifest last_frame (best-effort; may be unsupported).",
+    )
+    parser.add_argument(
+        "--chain-first-frame-from-prev-video",
+        action="store_true",
+        help="Use a frame extracted from the previous scene's video as the next video's first frame (improves seamless joins).",
+    )
+    parser.add_argument(
+        "--chain-first-frame-seconds-from-end",
+        type=float,
+        default=1.0,
+        help="When chaining, extract the first frame from this many seconds before the end of the previous video.",
+    )
+
+    # logging
+    parser.add_argument("--log-dir", default=None, help="Directory to write provider logs (default: <base>/logs/providers).")
+
+    # ElevenLabs
+    parser.add_argument("--elevenlabs-api-key", default=_env("ELEVENLABS_API_KEY"))
+    parser.add_argument("--elevenlabs-api-base", default=_env("ELEVENLABS_API_BASE", "https://api.elevenlabs.io/v1"))
+    parser.add_argument("--elevenlabs-voice-id", default=_env("ELEVENLABS_VOICE_ID"))
+    parser.add_argument("--elevenlabs-model-id", default=_env("ELEVENLABS_MODEL_ID", "eleven_multilingual_v2"))
+    parser.add_argument("--elevenlabs-output-format", default=_env("ELEVENLABS_OUTPUT_FORMAT", "mp3_44100_128"))
+    parser.add_argument("--tts-prompt-prefix", default="", help="Optional text prepended to every TTS input.")
+    parser.add_argument("--tts-prompt-suffix", default="", help="Optional text appended to every TTS input.")
+
+    args = parser.parse_args()
+
+    manifest_path = Path(args.manifest)
+    if not manifest_path.exists():
+        raise SystemExit(f"Manifest not found: {manifest_path}")
+
+    base_dir = Path(args.base_dir) if args.base_dir else manifest_path.parent
+    md = manifest_path.read_text(encoding="utf-8")
+    yaml_text = extract_yaml_block(md)
+    metadata, scenes = parse_manifest_yaml(yaml_text)
+
+    if not scenes:
+        raise SystemExit("No scenes found in manifest YAML.")
+
+    scene_filter: set[int] | None = None
+    if args.scene_ids:
+        scene_filter = {int(x.strip()) for x in args.scene_ids.split(",") if x.strip()}
+
+    aspect_ratio = (
+        args.image_aspect_ratio
+        or args.video_aspect_ratio
+        or (metadata.get("aspect_ratio") if isinstance(metadata.get("aspect_ratio"), str) else None)
+        or "9:16"
+    )
+
+    log_dir = Path(args.log_dir) if args.log_dir else (base_dir / "logs/providers")
+
+    def _scene_uses_tool(scene: Scene, tools: set[str]) -> bool:
+        return normalize_tool_name(scene.image_tool) in tools
+
+    needs_gemini_image = (
+        not args.skip_images
+        and any(
+            _scene_uses_tool(scene, {"google_nanobanana_pro", "nanobanana_pro"})
+            and scene.image_output
+            and scene.image_prompt
+            and (scene_filter is None or scene.scene_id in scene_filter)
+            for scene in scenes
+        )
+    )
+    needs_seadream_image = (
+        not args.skip_images
+        and any(
+            _scene_uses_tool(scene, {"seadream", "seedream", "seedream_4_5", "byteplus_seedream_4_5"})
+            and scene.image_output
+            and scene.image_prompt
+            and (scene_filter is None or scene.scene_id in scene_filter)
+            for scene in scenes
+        )
+    )
+    needs_gemini_video = (
+        not args.skip_videos
+        and any(
+            normalize_tool_name(scene.video_tool) == "google_veo_3_1"
+            and scene.video_output
+            and (scene_filter is None or scene.scene_id in scene_filter)
+            for scene in scenes
+        )
+    )
+
+    gemini_client: GeminiClient | None = None
+    if not args.dry_run and (needs_gemini_image or needs_gemini_video):
+        if not args.gemini_api_key:
+            raise SystemExit("Missing GEMINI_API_KEY (required for Gemini image/video).")
+        gemini_client = GeminiClient(
+            GeminiConfig(
+                api_key=args.gemini_api_key,
+                api_base=args.gemini_api_base,
+                image_model=args.gemini_image_model,
+                video_model=args.gemini_video_model,
+            )
+        )
+
+    seadream_client: SeaDreamClient | None = None
+    if not args.dry_run and needs_seadream_image:
+        if not args.seadream_api_key:
+            raise SystemExit("Missing SEADREAM_API_KEY (required for SeaDream image generation).")
+        seadream_client = SeaDreamClient(
+            SeaDreamConfig(
+                api_key=args.seadream_api_key,
+                api_base=args.seadream_api_base,
+                image_model=args.seadream_model,
+            )
+        )
+
+    elevenlabs_client: ElevenLabsClient | None = None
+    if not args.dry_run and not args.skip_audio:
+        needs_elevenlabs = any(
+            normalize_tool_name(scene.narration_tool) == "elevenlabs"
+            and scene.narration_output
+            and (scene_filter is None or scene.scene_id in scene_filter)
+            for scene in scenes
+        )
+        if needs_elevenlabs:
+            if not args.elevenlabs_api_key:
+                raise SystemExit("Missing ELEVENLABS_API_KEY (required for ElevenLabs TTS).")
+            if not args.elevenlabs_voice_id:
+                raise SystemExit("Missing ELEVENLABS_VOICE_ID (required for ElevenLabs TTS).")
+            if str(args.elevenlabs_voice_id).strip().lower() in {"your_voice_id", "voice_id_tbd", "tbd"}:
+                raise SystemExit(
+                    "ELEVENLABS_VOICE_ID looks like a placeholder. Set ELEVENLABS_VOICE_ID to a real ElevenLabs voice_id."
+                )
+            elevenlabs_client = ElevenLabsClient(
+                ElevenLabsConfig(
+                    api_key=args.elevenlabs_api_key,
+                    api_base=args.elevenlabs_api_base,
+                    voice_id=args.elevenlabs_voice_id,
+                    model_id=args.elevenlabs_model_id,
+                    output_format=args.elevenlabs_output_format,
+                )
+            )
+
+    # Pass 1: images (allows later videos to reference other scene images, e.g. first/last frame conditioning).
+    for scene in scenes:
+        if scene_filter is not None and scene.scene_id not in scene_filter:
+            continue
+
+        if args.skip_images or not scene.image_output or not scene.image_prompt:
+            continue
+
+        tool = normalize_tool_name(scene.image_tool)
+        out_path = resolve_path(base_dir, scene.image_output)
+        if not out_path:
+            raise SystemExit(f"scene{scene.scene_id}: missing image output path")
+
+        scene_aspect_ratio = scene.image_aspect_ratio or aspect_ratio
+        scene_image_size = scene.image_size or args.image_size
+
+        refs: list[Path] = []
+        for ref_str in scene.image_references or []:
+            ref_path = resolve_path(base_dir, ref_str)
+            if not ref_path:
+                continue
+            if not args.dry_run and not ref_path.exists():
+                raise SystemExit(f"scene{scene.scene_id}: reference image not found: {ref_path}")
+            refs.append(ref_path)
+
+        if tool in {"google_nanobanana_pro", "nanobanana_pro"}:
+            prefix = (args.image_prompt_prefix or "").strip()
+            suffix = (args.image_prompt_suffix or "").strip()
+            prompt = scene.image_prompt.strip()
+            if prefix:
+                prompt = prefix + "\n\n" + prompt
+            if suffix:
+                prompt = prompt + "\n\n" + suffix
+            generate_gemini_image(
+                client=gemini_client,
+                model=args.gemini_image_model,
+                prompt=prompt,
+                aspect_ratio=scene_aspect_ratio,
+                image_size=scene_image_size,
+                reference_images=refs,
+                out_path=out_path,
+                force=args.force,
+                log_path=log_dir / f"scene{scene.scene_id}_image.json",
+                dry_run=args.dry_run,
+            )
+        elif tool in {"seadream", "seedream", "seedream_4_5", "byteplus_seedream_4_5"}:
+            generate_seadream_image(
+                client=seadream_client,
+                model=args.seadream_model,
+                prompt=scene.image_prompt,
+                size=args.seadream_size,
+                out_path=out_path,
+                force=args.force,
+                log_path=log_dir / f"scene{scene.scene_id}_image.json",
+                dry_run=args.dry_run,
+            )
+        else:
+            raise SystemExit(f"scene{scene.scene_id}: unsupported image tool: {scene.image_tool}")
+
+    # Pass 2: videos
+    video_output_by_scene_id: dict[int, Path] = {}
+    for scene in scenes:
+        if not scene.video_output:
+            continue
+        resolved = resolve_path(base_dir, scene.video_output)
+        if resolved:
+            video_output_by_scene_id[int(scene.scene_id)] = resolved
+
+    prev_chain_first_frame: Path | None = None
+    for scene in scenes:
+        if scene_filter is not None and scene.scene_id not in scene_filter:
+            continue
+
+        if args.skip_videos or not scene.video_output or not (scene.video_motion_prompt or scene.image_prompt):
+            continue
+
+        tool = normalize_tool_name(scene.video_tool)
+        out_path = resolve_path(base_dir, scene.video_output)
+        if not out_path:
+            raise SystemExit(f"scene{scene.scene_id}: missing video output path")
+
+        if tool != "google_veo_3_1":
+            raise SystemExit(f"scene{scene.scene_id}: unsupported video tool: {scene.video_tool}")
+
+        dur = duration_from_timestamp_range(scene.timestamp, args.default_scene_seconds)
+
+        input_image = resolve_path(base_dir, scene.video_first_frame or scene.video_input_image)
+        if input_image is None and scene.image_output:
+            input_image = resolve_path(base_dir, scene.image_output)
+        if args.chain_first_frame_from_prev_video and prev_chain_first_frame is not None:
+            # Best-effort: override the provided first_frame so the new clip starts
+            # exactly where the previous clip ended (improves mp4 concat continuity).
+            input_image = prev_chain_first_frame
+        elif args.chain_first_frame_from_prev_video and prev_chain_first_frame is None:
+            # If the user is regenerating only a later scene via --scene-ids, we may have skipped the previous
+            # video generation. In that case, try to derive the chaining frame from the previous scene's video file.
+            prev_video = video_output_by_scene_id.get(int(scene.scene_id) - 1)
+            if prev_video and prev_video.exists() and not args.dry_run:
+                chain_frame = prev_video.with_name(prev_video.stem + "_chain_first_frame.png")
+                try:
+                    prev_chain_first_frame = _ffmpeg_extract_frame_from_end_best_effort(
+                        prev_video,
+                        chain_frame,
+                        seconds_from_end=float(args.chain_first_frame_seconds_from_end),
+                        force=True,
+                    )
+                    input_image = prev_chain_first_frame
+                except FileNotFoundError:
+                    prev_chain_first_frame = None
+        if input_image and not args.dry_run and not input_image.exists():
+            raise SystemExit(f"scene{scene.scene_id}: first frame image not found: {input_image}")
+
+        last_image: Path | None = None
+        if args.enable_last_frame:
+            last_image = resolve_path(base_dir, scene.video_last_frame)
+            if last_image and not args.dry_run and not last_image.exists():
+                raise SystemExit(f"scene{scene.scene_id}: last frame image not found: {last_image}")
+
+        prompt_parts: list[str] = []
+        if scene.video_motion_prompt:
+            prompt_parts.append(scene.video_motion_prompt.strip())
+        if scene.image_prompt:
+            prompt_parts.append("Scene description:\n" + scene.image_prompt.strip())
+        prompt = "\n\n".join(prompt_parts).strip()
+        vprefix = (args.video_prompt_prefix or "").strip()
+        vsuffix = (args.video_prompt_suffix or "").strip()
+        if vprefix:
+            prompt = vprefix + "\n\n" + prompt
+        if vsuffix:
+            prompt = prompt + "\n\n" + vsuffix
+
+        video_ref_paths: list[Path] = []
+        for ref_str in scene.image_references or []:
+            ref_path = resolve_path(base_dir, ref_str)
+            if not ref_path:
+                continue
+            if not args.dry_run and not ref_path.exists():
+                raise SystemExit(f"scene{scene.scene_id}: reference image not found: {ref_path}")
+            video_ref_paths.append(ref_path)
+
+        segs, trim_to = _plan_veo_segments(dur)
+        if len(segs) == 1:
+            generate_veo_video(
+                client=gemini_client,
+                model=args.gemini_video_model,
+                prompt=prompt,
+                negative_prompt=args.video_negative_prompt or "",
+                duration_seconds=segs[0],
+                aspect_ratio=aspect_ratio,
+                resolution=args.video_resolution,
+                input_image=input_image,
+                last_frame_image=last_image,
+                reference_images=video_ref_paths,
+                out_path=out_path,
+                poll_every=args.poll_every,
+                timeout_seconds=args.timeout_seconds,
+                force=args.force,
+                log_path=log_dir / f"scene{scene.scene_id}_video.json",
+                dry_run=args.dry_run,
+            )
+        else:
+            if args.dry_run:
+                print(f"[dry-run] VIDEO scene{scene.scene_id}: segments={segs} then trim_to={trim_to}")
+            else:
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    tmpdir_path = Path(tmpdir)
+                    seg_paths: list[Path] = []
+                    for idx, seg_dur in enumerate(segs, start=1):
+                        seg_out = tmpdir_path / f"scene{scene.scene_id}_seg{idx}.mp4"
+                        generate_veo_video(
+                            client=gemini_client,
+                            model=args.gemini_video_model,
+                            prompt=prompt,
+                            negative_prompt=args.video_negative_prompt or "",
+                            duration_seconds=seg_dur,
+                            aspect_ratio=aspect_ratio,
+                            resolution=args.video_resolution,
+                            input_image=input_image,
+                            last_frame_image=last_image,
+                            reference_images=video_ref_paths,
+                            out_path=seg_out,
+                            poll_every=args.poll_every,
+                            timeout_seconds=args.timeout_seconds,
+                            force=True,
+                            log_path=log_dir / f"scene{scene.scene_id}_video_seg{idx}.json",
+                            dry_run=False,
+                        )
+                        seg_paths.append(seg_out)
+
+                    concat_path = tmpdir_path / f"scene{scene.scene_id}_concat.mp4"
+                    _ffmpeg_concat_videos(seg_paths, concat_path)
+                    if trim_to:
+                        _ffmpeg_trim_video(concat_path, out_path, int(trim_to))
+                    else:
+                        out_path.parent.mkdir(parents=True, exist_ok=True)
+                        out_path.write_bytes(concat_path.read_bytes())
+
+        if args.chain_first_frame_from_prev_video:
+            if args.dry_run:
+                prev_chain_first_frame = out_path.with_name(out_path.stem + "_chain_first_frame.png")
+            else:
+                chain_frame = out_path.with_name(out_path.stem + "_chain_first_frame.png")
+                try:
+                    _ffmpeg_extract_frame_from_end_best_effort(
+                        out_path,
+                        chain_frame,
+                        seconds_from_end=float(args.chain_first_frame_seconds_from_end),
+                        force=args.force,
+                    )
+                    prev_chain_first_frame = chain_frame
+                except FileNotFoundError:
+                    # ffmpeg missing; chaining can't proceed.
+                    prev_chain_first_frame = None
+
+    # Pass 3: audio (TTS)
+    for scene in scenes:
+        if scene_filter is not None and scene.scene_id not in scene_filter:
+            continue
+
+        if args.skip_audio or not scene.narration_output:
+            continue
+
+        dur = duration_from_timestamp_range(scene.timestamp, args.default_scene_seconds)
+        out_path = resolve_path(base_dir, scene.narration_output)
+        if not out_path:
+            raise SystemExit(f"scene{scene.scene_id}: missing narration output path")
+
+        tool = normalize_tool_name(scene.narration_tool)
+        if tool == "elevenlabs":
+            if not scene.narration_text:
+                raise SystemExit(f"scene{scene.scene_id}: missing narration text for ElevenLabs TTS")
+            tts_text = scene.narration_text.strip()
+            tprefix = (args.tts_prompt_prefix or "").strip()
+            tsuffix = (args.tts_prompt_suffix or "").strip()
+            if tprefix:
+                tts_text = tprefix + "\n\n" + tts_text
+            if tsuffix:
+                tts_text = tts_text + "\n\n" + tsuffix
+            normalize_dur = dur if scene.narration_normalize_to_scene_duration else None
+            generate_elevenlabs_tts(
+                client=elevenlabs_client,
+                voice_id=args.elevenlabs_voice_id or "VOICE_ID_TBD",
+                model_id=args.elevenlabs_model_id or "eleven_multilingual_v2",
+                output_format=args.elevenlabs_output_format or "mp3_44100_128",
+                text=tts_text,
+                out_path=out_path,
+                duration_seconds=normalize_dur,
+                force=args.force,
+                request_log_path=log_dir / f"scene{scene.scene_id}_tts_request.json",
+                dry_run=args.dry_run,
+            )
+        elif tool in {"tbd", ""}:
+            if args.dry_run:
+                print(f"[dry-run] AUDIO {out_path} <- placeholder (tool={scene.narration_tool})")
+            else:
+                _ffmpeg_write_silence_mp3(out_path, dur, args.force)
+        else:
+            raise SystemExit(f"scene{scene.scene_id}: unsupported narration tool: {scene.narration_tool}")
+
+    print("Done.")
+
+
+if __name__ == "__main__":
+    main()

@@ -18,6 +18,8 @@ model: inherit
 1. **自律的に動作**: メインエージェントからの追加指示を待たず、調査を完遂する
 2. **手順書に従う**: `docs/information-gathering.md` の手順とスキーマに厳密に従う
 3. **構造化出力**: 結果は `output/research/` に YAML 形式の Markdown ファイルとして保存
+4. **Story-first**: 小ネタ/裏話の前に「そもそもどんな話か」を必ず明確化する（canonical synopsis + beat sheet）
+5. **Scene ID を保持**: 収集した情報を scene_id（最低20）へ配賦し、後段の story/script で使える形にする
 
 ## 実行手順
 
@@ -39,6 +41,11 @@ model: inherit
 
 優先順位に従って以下を実行:
 
+0. **Story baseline（最優先）**:
+   - 原典/代表的な異本をもとに **canonical synopsis** を作る（5–10行）
+   - **beat sheet（時系列10–20個）** を作る
+   - 登場人物/対立/賭け金/舞台の最小セットを確定する
+   - **scene_plan（scene_id: 1..20）** を作る（各sceneに beat_summary と desired_emotion を付ける）
 1. **Level 1（原典）**: 青空文庫、国会図書館等で原典・全文を検索
 2. **Level 2（学術）**: 学術論文、研究資料を検索
 3. **Level 3（百科事典）**: Wikipedia、コトバンク等で基礎情報を収集
@@ -91,6 +98,18 @@ WebSearch と WebFetch を活用して情報を収集する。
 - **Complication**: {問題}
 - **Question**: {問い}
 - **Answer**: {答え}
+
+## Story Baseline（必須）
+
+- **Canonical synopsis（短いあらすじ）**: {5–10行}
+- **Beat sheet（時系列の箇条書き）**: {10–20個}
+- **Characters / Conflict / Stakes / Setting**: {最小セット}
+
+## Scene Plan（必須）
+
+- scene_id は原則 1..20（最低20）
+- 全体に効く情報は opening/ending（例: 1, 19, 20）へ寄せる
+- 途中のネタは該当 scene_id に割り当てる（複数可）
 
 ## 構造化データ
 

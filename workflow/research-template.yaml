@@ -2,6 +2,57 @@
 topic: "string"
 aliases: ["string"]
 
+# Story-first baseline (必須)
+story_baseline:
+  # 「そもそもどんな話か」を最優先で明確化する。
+  # 小ネタ/裏話/逸話はこの後でよい。
+  canonical_synopsis:
+    one_liner: "string"
+    short_summary: "string" # 5-10行程度。誰が/何を求め/何が起き/どう決着するか。
+    beat_sheet:
+      - beat: "string"      # 10-20個程度の箇条書き（時系列）
+  characters:
+    protagonist: "string"
+    key_allies: ["string"]
+    key_antagonists: ["string"]
+    core_goal: "string"
+    stakes: "string"
+    setting: "string"
+
+# Scene plan (必須)
+#
+# 目的:
+# - 後続の story/script/manifest で、調査した情報を scene に割り当てられるようにする。
+# - 「小ネタばかり」にならないよう、まずストーリーを scene で分割して骨格を固定する。
+#
+# ルール（運用）:
+# - scene_id は原則 1..20（最低20）。
+# - 全体に効く情報は scene_id の opening / ending（例: 1, 19, 20）へ寄せる。
+# - 途中のネタは該当 scene_id（複数可）へ割り当てる。
+scene_plan:
+  min_scene_count: 20
+  scenes:
+    - scene_id: 1
+      role: "opening|development|turn|climax|ending"
+      beat_summary: "string"      # 1-2行
+      desired_emotion: "string"   # wonder/tension/relief...
+    - scene_id: 2
+      role: "opening|development|turn|climax|ending"
+      beat_summary: "string"
+      desired_emotion: "string"
+
+# Hero-story suitability (英雄譚として適しているかの検証)
+hero_story_validation:
+  hero_journey_fit:
+    fit: "high|medium|low"
+    rationale: "string"
+    missing_or_weak_beats: ["string"]
+  narrative_arc:
+    inciting_incident: "string"
+    midpoint: "string"
+    climax: "string"
+    resolution: "string"
+
 hypothesis:
   initial_hypothesis:
     statement: "string"
@@ -34,6 +85,7 @@ engagement:
     - type: "mystery|counterintuitive|hidden_truth|emotional"
       content: "string"
       curiosity_score: 0.0
+      scene_ids: [1]     # this hook best fits which scene(s)
 
 metadata:
   collected_at: "ISO8601"

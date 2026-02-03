@@ -1,0 +1,114 @@
+#!/usr/bin/env python3
+"""
+Scaffold a run folder for the immersive ride POV workflow (/toc-immersive-ride).
+
+This script is intentionally a helper:
+- It creates output/<topic>_<timestamp>/ with standard files and folders
+- It writes a draft video_manifest.md based on workflow/immersive-ride-video-manifest-template.md
+- It does NOT call external generation APIs
+"""
+
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import re
+from pathlib import Path
+
+
+def sanitize_topic(topic: str) -> str:
+    topic = topic.strip().replace(" ", "_")
+    topic = re.sub(r"[\\/]+", "_", topic)
+    topic = re.sub(r"[^0-9A-Za-z_一-龠ぁ-んァ-ンー]+", "_", topic)
+    topic = re.sub(r"_+", "_", topic).strip("_")
+    return topic or "topic"
+
+
+def now_iso() -> str:
+    return dt.datetime.now().astimezone().isoformat(timespec="seconds")
+
+
+def default_timestamp() -> str:
+    return dt.datetime.now().strftime("%Y%m%d_%H%M")
+
+
+def append_state_block(state_path: Path, kv: dict[str, str]) -> None:
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    lines = [f"{k}={v}" for k, v in kv.items()]
+    block = "\n".join(lines) + "\n---\n"
+    with state_path.open("a", encoding="utf-8") as f:
+        f.write(block)
+
+
+def write_text(path: Path, content: str, force: bool) -> bool:
+    if path.exists() and not force:
+        return False
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+    return True
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Scaffold an immersive ride POV run folder.")
+    parser.add_argument("--topic", required=True, help="Video topic (used for folder name).")
+    parser.add_argument("--timestamp", default=None, help="Timestamp (YYYYMMDD_HHMM).")
+    parser.add_argument("--base", default="output", help="Base output directory.")
+    parser.add_argument("--run-dir", default=None, help="Override run directory path.")
+    parser.add_argument("--force", action="store_true", help="Overwrite existing files.")
+    args = parser.parse_args()
+
+    topic_raw = args.topic
+    topic_slug = sanitize_topic(topic_raw)
+    ts = args.timestamp or default_timestamp()
+
+    run_dir = Path(args.run_dir) if args.run_dir else (Path(args.base) / f"{topic_slug}_{ts}")
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    # assets
+    (run_dir / "assets" / "characters").mkdir(parents=True, exist_ok=True)
+    (run_dir / "assets" / "styles").mkdir(parents=True, exist_ok=True)
+    (run_dir / "assets" / "scenes").mkdir(parents=True, exist_ok=True)
+    (run_dir / "assets" / "audio").mkdir(parents=True, exist_ok=True)
+    (run_dir / "logs").mkdir(parents=True, exist_ok=True)
+
+    state_path = run_dir / "state.txt"
+    if not state_path.exists():
+        append_state_block(
+            state_path,
+            {
+                "timestamp": now_iso(),
+                "topic": topic_raw,
+                "status": "INIT",
+                "runtime.stage": "immersive_ride_scaffold",
+            },
+        )
+
+    write_text(run_dir / "research.md", "# Research Output\n\nTBD\n", force=args.force)
+    write_text(run_dir / "story.md", "# Story Script Output\n\nTBD\n", force=args.force)
+    write_text(run_dir / "script.md", "# Script Output (Immersive Ride POV)\n\nTBD\n", force=args.force)
+
+    template_path = Path("workflow/immersive-ride-video-manifest-template.md")
+    if template_path.exists():
+        tmpl = template_path.read_text(encoding="utf-8")
+        tmpl = tmpl.replace("<topic>", topic_raw).replace("<timestamp>", ts)
+        write_text(run_dir / "video_manifest.md", tmpl, force=args.force)
+    else:
+        write_text(run_dir / "video_manifest.md", "# Video Manifest\n\nTBD\n", force=args.force)
+
+    append_state_block(
+        state_path,
+        {
+            "timestamp": now_iso(),
+            "topic": topic_raw,
+            "status": "DONE",
+            "runtime.stage": "immersive_ride_scaffolded",
+            "artifact.video_manifest": str((run_dir / "video_manifest.md").resolve()),
+        },
+    )
+
+    print(f"Run dir: {run_dir.resolve()}")
+
+
+if __name__ == "__main__":
+    main()
+

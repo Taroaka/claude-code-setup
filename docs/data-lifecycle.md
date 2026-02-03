@@ -56,9 +56,9 @@ lineage_record:
   input_refs:
     - "output/<topic>_<timestamp>/story.md"
   provider:
-    name: "tbd"
-    model: "tbd"
-    version: "tbd"
+    name: "google_veo_3_1"
+    model: "veo-3.1-generate-preview"
+    version: "preview"
   params:
     seed: 1234
     prompt: "string"

@@ -1,0 +1,49 @@
+dataset_metadata:
+  id: "momotaro_v1"
+  topic: "桃太郎"
+  created_at: "2026-01-24T00:00:00+09:00"
+  notes:
+    - "このdatasetはMVP検証用（プレースホルダ）"
+    - "目的は『scene→生成指示』の改善ループを回すための土台作り"
+
+cases:
+  - case_id: "momotaro_scene1"
+    input:
+      scene:
+        scene_id: 1
+        narration_text: "昔、ある村に桃から生まれた少年がいました。"
+        visual_description: "静かな村の朝"
+        motion: "slow_pan"
+        overlay:
+          main: "桃太郎"
+          sub: "なぜ桃から生まれたのか？"
+    ideal_output:
+      image_prompt: |
+        Quiet rural Japanese village at dawn, soft warm morning light,
+        cinematic, realistic, warm color grading,
+        wide shot, gentle atmosphere, 9:16 vertical composition
+      motion_prompt: "Slow pan across the village scenery, subtle parallax, calm pace"
+      overlay:
+        main_text: "桃太郎"
+        sub_text: "なぜ桃から生まれたのか？"
+
+  - case_id: "momotaro_scene2"
+    input:
+      scene:
+        scene_id: 2
+        narration_text: "村は鬼の噂でざわめいていました。"
+        visual_description: "村に広がる不安"
+        motion: "zoom_in"
+        overlay:
+          main: "鬼の正体"
+          sub: "本当に悪なのか？"
+    ideal_output:
+      image_prompt: |
+        Villagers whispering in a rural Japanese village, anxious mood,
+        slightly darker tones, cinematic lighting,
+        medium shot, shallow depth of field, 9:16 vertical composition
+      motion_prompt: "Subtle slow zoom in to emphasize tension, minimal camera shake"
+      overlay:
+        main_text: "鬼の正体"
+        sub_text: "本当に悪なのか？"
+

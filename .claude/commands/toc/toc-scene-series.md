@@ -1,0 +1,49 @@
+# /toc-scene-series
+
+ToC（TikTok Story Creator）を「topic → 情報収集 → sceneごとのQ&A縦動画（複数本）」として実行するコマンド。
+
+## 使い方（想定）
+
+```text
+/toc-scene-series "桃太郎" --min-seconds 30 --max-seconds 60
+```
+
+部分実行（例: scene 2 と 4 だけ作り直す）:
+
+```text
+/toc-scene-series "桃太郎" --scene-ids 2,4 --min-seconds 30 --max-seconds 60
+```
+
+dry-run（外部APIは呼ばず、設計成果物まで）:
+
+```text
+/toc-scene-series "桃太郎" --dry-run
+```
+
+## 期待される出力（概要）
+
+`output/<topic>_<timestamp>/` に以下が生成される:
+
+- `state.txt`（追記型）
+- `research.md`
+- `story.md`（questionを含む）
+- `series_plan.md`（sceneごとの question 抽出）
+- `scenes/sceneXX/`（sceneごとの成果物）
+  - `evidence.md`
+  - `script.md`（30–60秒のQ&A用）
+  - `video_manifest.md`
+  - `assets/**`
+  - `video.mp4`
+
+## 実行メモ（内部フローの意図）
+
+- question は `text_overlay.sub_text` の `content` を使う
+- 根拠は **既存 `research.md` 優先**、不足時のみ Web 追加調査
+- scene動画の尺は **30–60秒**（内容に応じて決める）
+- 映像の「現実寄り/抽象寄り」は **実装前に再確認**（このコマンドではプレースホルダを許容）
+
+## 参照
+
+- 既存エントリ: `.claude/commands/toc/toc-run.md`
+- 設計: `.steering/20260125-scene-series/requirements.md`
+- 仕様（正本）: `docs/implementation/scene-series-entrypoint.md`

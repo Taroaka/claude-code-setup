@@ -37,20 +37,22 @@ scenes:
   - scene_id: 1
     timestamp: "00:00-00:10"
     image_generation:
-      tool: "dalle3"
+      # tool: "google_nanobanana_pro"
+      # tool: "seadream"        # Seedream 4.5 (OpenAI Images compatible; see SEADREAM_* env)
+      tool: "google_nanobanana_pro"
       prompt: "quiet rural village at dawn"
       output: "assets/scenes/scene1_base.png"
       iterations: 4
       selected: 1
     video_generation:
-      tool: "runway"
+      tool: "google_veo_3_1"
       input_image: "assets/scenes/scene1_base.png"
       motion_prompt: "slow pan"
       output: "assets/scenes/scene1_video.mp4"
     audio:
       narration:
         text: "昔、ある村に桃から生まれた少年がいました。"
-        tool: "openai_tts"
+        tool: "elevenlabs"
         output: "assets/audio/scene1_narration.mp3"
       bgm:
         source: "assets/audio/bgm_intro.mp3"
