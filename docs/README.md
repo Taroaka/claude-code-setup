@@ -19,6 +19,7 @@
 
 - LangGraph topology: `docs/implementation/langgraph-topology.md`
 - Agent roles & prompts: `docs/implementation/agent-roles-and-prompts.md`
+- Image prompting（Nano Banana Pro / cross-model）: `docs/implementation/image-prompting.md`
 - Assistant tooling（Claude/Codex）: `docs/implementation/assistant-tooling.md`
 - Entrypoint (/toc-run): `docs/implementation/entrypoint.md`
 - Entrypoint (/toc-scene-series): `docs/implementation/scene-series-entrypoint.md`
@@ -31,6 +32,7 @@
 ## データ/運用
 - データライフサイクル: `docs/data-lifecycle.md`
 - データ契約（state/成果物テンプレ）: `docs/data-contracts.md`
+- パイプライン方式選択（自然言語）: `workflow/playbooks/README.md`
 - セキュリティ/コンプライアンス: `docs/security-compliance.md`
 - CI/CD: `docs/ci-cd.md`
 - DB設計: `docs/DATABASE_DESIGN.md`

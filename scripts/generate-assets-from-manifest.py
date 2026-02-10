@@ -21,6 +21,12 @@ import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
+
+try:
+    import yaml  # type: ignore[import-not-found]
+except ModuleNotFoundError:  # pragma: no cover
+    yaml = None
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
@@ -28,8 +34,9 @@ if str(REPO_ROOT) not in sys.path:
 
 from toc.env import load_env_files
 from toc.http import HttpError, request_bytes
-from toc.providers.elevenlabs import ElevenLabsClient, ElevenLabsConfig
+from toc.providers.elevenlabs import DEFAULT_ELEVENLABS_VOICE_ID, ElevenLabsClient, ElevenLabsConfig
 from toc.providers.gemini import GeminiClient, GeminiConfig
+from toc.providers.kling import KlingClient, KlingConfig
 from toc.providers.seadream import SeaDreamClient, SeaDreamConfig
 
 
@@ -44,6 +51,10 @@ class SceneSpec:
     image_prompt: str | None
     image_output: str | None
     image_references: list[str]
+    image_character_ids: list[str]
+    image_character_ids_present: bool
+    image_object_ids: list[str]
+    image_object_ids_present: bool
     image_aspect_ratio: str | None
     image_size: str | None
     video_tool: str | None
@@ -56,6 +67,40 @@ class SceneSpec:
     narration_text: str | None
     narration_output: str | None
     narration_normalize_to_scene_duration: bool
+
+
+@dataclass(frozen=True)
+class CharacterBibleEntry:
+    character_id: str | None
+    reference_images: list[str]
+    fixed_prompts: list[str]
+    notes: str | None
+
+
+@dataclass(frozen=True)
+class StyleGuideSpec:
+    visual_style: str | None
+    forbidden: list[str]
+    reference_images: list[str]
+
+
+@dataclass(frozen=True)
+class ObjectBibleEntry:
+    object_id: str | None
+    kind: str | None  # setpiece|artifact|phenomenon (soft-validated)
+    reference_images: list[str]
+    fixed_prompts: list[str]
+    cinematic_role: str | None
+    cinematic_visual_takeaways: list[str]
+    cinematic_spectacle_details: list[str]
+    notes: str | None
+
+
+@dataclass(frozen=True)
+class AssetGuides:
+    character_bible: list[CharacterBibleEntry]
+    style_guide: StyleGuideSpec | None
+    object_bible: list[ObjectBibleEntry]
 
 
 def _env(name: str, default: str | None = None) -> str | None:
@@ -110,7 +155,98 @@ def _parse_yaml_scalar(value: str) -> str | None:
     return v
 
 
-def parse_manifest_yaml(yaml_text: str) -> tuple[dict, list[SceneSpec]]:
+def _ensure_str_list(value: Any) -> list[str]:
+    if not value:
+        return []
+    if isinstance(value, list):
+        out: list[str] = []
+        for item in value:
+            if item is None:
+                continue
+            s = str(item).strip()
+            if not s:
+                continue
+            out.append(s)
+        return out
+    s = str(value).strip()
+    return [s] if s else []
+
+
+def _as_opt_str(value: Any) -> str | None:
+    if value is None:
+        return None
+    s = str(value).strip()
+    if not s:
+        return None
+    if s.lower() in {"null", "none"}:
+        return None
+    return s
+
+
+def _parse_assets_spec(assets: Any) -> AssetGuides:
+    if not isinstance(assets, dict):
+        return AssetGuides(character_bible=[], style_guide=None, object_bible=[])
+
+    # character bible
+    character_bible: list[CharacterBibleEntry] = []
+    raw_cb = assets.get("character_bible")
+    if isinstance(raw_cb, list):
+        for item in raw_cb:
+            if not isinstance(item, dict):
+                continue
+            character_bible.append(
+                CharacterBibleEntry(
+                    character_id=_as_opt_str(item.get("character_id")),
+                    reference_images=_ensure_str_list(item.get("reference_images")),
+                    fixed_prompts=_ensure_str_list(item.get("fixed_prompts")),
+                    notes=_as_opt_str(item.get("notes")),
+                )
+            )
+
+    # style guide
+    style_guide = None
+    raw_sg = assets.get("style_guide")
+    if isinstance(raw_sg, dict):
+        style_guide = StyleGuideSpec(
+            visual_style=_as_opt_str(raw_sg.get("visual_style")),
+            forbidden=_ensure_str_list(raw_sg.get("forbidden")),
+            reference_images=_ensure_str_list(raw_sg.get("reference_images")),
+        )
+
+    # object / setpiece bible (optional)
+    object_bible: list[ObjectBibleEntry] = []
+    raw_ob = assets.get("object_bible")
+    if isinstance(raw_ob, list):
+        for item in raw_ob:
+            if not isinstance(item, dict):
+                continue
+            cinematic = item.get("cinematic") if isinstance(item.get("cinematic"), dict) else {}
+
+            role = (
+                _as_opt_str(cinematic.get("role"))
+                or _as_opt_str(item.get("cinematic_role"))
+                or _as_opt_str(item.get("role_in_film"))
+            )
+            visual = _ensure_str_list(cinematic.get("visual_takeaways")) or _ensure_str_list(item.get("visual_information"))
+            spectacle = _ensure_str_list(cinematic.get("spectacle_details")) or _ensure_str_list(item.get("spectacle_details"))
+
+            object_bible.append(
+                ObjectBibleEntry(
+                    object_id=_as_opt_str(item.get("object_id")),
+                    kind=_as_opt_str(item.get("kind")),
+                    reference_images=_ensure_str_list(item.get("reference_images")),
+                    fixed_prompts=_ensure_str_list(item.get("fixed_prompts")),
+                    cinematic_role=role,
+                    cinematic_visual_takeaways=visual,
+                    cinematic_spectacle_details=spectacle,
+                    notes=_as_opt_str(item.get("notes")),
+                )
+            )
+
+    return AssetGuides(character_bible=character_bible, style_guide=style_guide, object_bible=object_bible)
+
+
+def _parse_manifest_yaml_minimal(yaml_text: str) -> tuple[dict, list[SceneSpec]]:
     metadata: dict = {}
     scenes: list[SceneSpec] = []
     current: SceneSpec | None = None
@@ -205,6 +341,10 @@ def parse_manifest_yaml(yaml_text: str) -> tuple[dict, list[SceneSpec]]:
                 image_prompt=None,
                 image_output=None,
                 image_references=[],
+                image_character_ids=[],
+                image_character_ids_present=False,
+                image_object_ids=[],
+                image_object_ids_present=False,
                 image_aspect_ratio=None,
                 image_size=None,
                 video_tool=None,
@@ -251,6 +391,12 @@ def parse_manifest_yaml(yaml_text: str) -> tuple[dict, list[SceneSpec]]:
                 current.image_aspect_ratio = _parse_yaml_scalar(value)
             elif key == "image_size":
                 current.image_size = _parse_yaml_scalar(value)
+            elif key == "character_ids":
+                # The minimal parser doesn't support list parsing here; mark presence only.
+                current.image_character_ids_present = True
+            elif key == "object_ids":
+                # The minimal parser doesn't support list parsing here; mark presence only.
+                current.image_object_ids_present = True
             continue
 
         # video generation
@@ -289,6 +435,388 @@ def parse_manifest_yaml(yaml_text: str) -> tuple[dict, list[SceneSpec]]:
     return metadata, scenes
 
 
+def _parse_manifest_yaml_pyyaml(yaml_text: str) -> tuple[dict, AssetGuides, list[SceneSpec]]:
+    if yaml is None:  # pragma: no cover
+        raise RuntimeError("PyYAML is not installed.")
+
+    data = yaml.safe_load(yaml_text)
+    if not isinstance(data, dict):
+        raise ValueError("Manifest YAML must be a mapping at the root.")
+
+    vm = data.get("video_metadata")
+    metadata = {}
+    if isinstance(vm, dict):
+        for key in ("topic", "aspect_ratio", "resolution"):
+            if key in vm:
+                metadata[key] = _as_opt_str(vm.get(key))
+
+    assets = _parse_assets_spec(data.get("assets"))
+
+    scenes: list[SceneSpec] = []
+    raw_scenes = data.get("scenes") or []
+    if not isinstance(raw_scenes, list):
+        raise ValueError("Manifest YAML scenes must be a list.")
+    for raw_scene in raw_scenes:
+        if not isinstance(raw_scene, dict):
+            continue
+
+        try:
+            scene_id = int(raw_scene.get("scene_id"))
+        except Exception:
+            continue
+
+        timestamp = _as_opt_str(raw_scene.get("timestamp"))
+
+        ig = raw_scene.get("image_generation") if isinstance(raw_scene.get("image_generation"), dict) else {}
+        vg = raw_scene.get("video_generation") if isinstance(raw_scene.get("video_generation"), dict) else {}
+
+        image_tool = _as_opt_str(ig.get("tool")) if isinstance(ig, dict) else None
+        image_prompt = _as_opt_str(ig.get("prompt")) if isinstance(ig, dict) else None
+        image_output = _as_opt_str(ig.get("output")) if isinstance(ig, dict) else None
+        image_references = _ensure_str_list(ig.get("references")) if isinstance(ig, dict) else []
+        image_character_ids_present = isinstance(ig, dict) and ("character_ids" in ig)
+        image_character_ids = _ensure_str_list(ig.get("character_ids")) if isinstance(ig, dict) else []
+        image_object_ids_present = isinstance(ig, dict) and ("object_ids" in ig)
+        image_object_ids = _ensure_str_list(ig.get("object_ids")) if isinstance(ig, dict) else []
+        image_aspect_ratio = _as_opt_str(ig.get("aspect_ratio")) if isinstance(ig, dict) else None
+        image_size = _as_opt_str(ig.get("image_size")) if isinstance(ig, dict) else None
+
+        video_tool = _as_opt_str(vg.get("tool")) if isinstance(vg, dict) else None
+        video_input_image = _as_opt_str(vg.get("input_image")) if isinstance(vg, dict) else None
+        video_first_frame = _as_opt_str(vg.get("first_frame")) if isinstance(vg, dict) else None
+        video_last_frame = _as_opt_str(vg.get("last_frame")) if isinstance(vg, dict) else None
+        video_motion_prompt = _as_opt_str(vg.get("motion_prompt")) if isinstance(vg, dict) else None
+        video_output = _as_opt_str(vg.get("output")) if isinstance(vg, dict) else None
+
+        # narration can be nested under audio.narration or directly under narration (legacy)
+        narration_tool = None
+        narration_text = None
+        narration_output = None
+        narration_normalize = True
+
+        audio = raw_scene.get("audio")
+        narration = None
+        if isinstance(audio, dict):
+            narration = audio.get("narration")
+        if narration is None:
+            narration = raw_scene.get("narration")
+        if isinstance(narration, dict):
+            narration_tool = _as_opt_str(narration.get("tool"))
+            narration_text = _as_opt_str(narration.get("text"))
+            narration_output = _as_opt_str(narration.get("output"))
+            normalize_raw = narration.get("normalize_to_scene_duration")
+            if isinstance(normalize_raw, bool):
+                narration_normalize = bool(normalize_raw)
+            else:
+                normalize_s = _as_opt_str(normalize_raw)
+                if normalize_s and normalize_s.strip().lower() in {"false", "no", "0"}:
+                    narration_normalize = False
+
+        scenes.append(
+            SceneSpec(
+                scene_id=scene_id,
+                timestamp=timestamp,
+                image_tool=image_tool,
+                image_prompt=image_prompt,
+                image_output=image_output,
+                image_references=image_references,
+                image_character_ids=image_character_ids,
+                image_character_ids_present=image_character_ids_present,
+                image_object_ids=image_object_ids,
+                image_object_ids_present=image_object_ids_present,
+                image_aspect_ratio=image_aspect_ratio,
+                image_size=image_size,
+                video_tool=video_tool,
+                video_input_image=video_input_image,
+                video_first_frame=video_first_frame,
+                video_last_frame=video_last_frame,
+                video_motion_prompt=video_motion_prompt,
+                video_output=video_output,
+                narration_tool=narration_tool,
+                narration_text=narration_text,
+                narration_output=narration_output,
+                narration_normalize_to_scene_duration=narration_normalize,
+            )
+        )
+
+    return metadata, assets, scenes
+
+
+def parse_manifest_yaml_full(yaml_text: str) -> tuple[dict, AssetGuides, list[SceneSpec]]:
+    try:
+        return _parse_manifest_yaml_pyyaml(yaml_text)
+    except Exception:
+        metadata, scenes = _parse_manifest_yaml_minimal(yaml_text)
+        return metadata, AssetGuides(character_bible=[], style_guide=None, object_bible=[]), scenes
+
+
+def parse_manifest_yaml(yaml_text: str) -> tuple[dict, list[SceneSpec]]:
+    metadata, _, scenes = parse_manifest_yaml_full(yaml_text)
+    return metadata, scenes
+
+
+def _dedupe_keep_order(items: list[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for item in items:
+        s = str(item).strip()
+        if not s:
+            continue
+        if s in seen:
+            continue
+        seen.add(s)
+        out.append(s)
+    return out
+
+
+def _merge_refs(existing: list[str], extra: list[str], *, exclude: str | None = None) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+
+    def add_one(v: str) -> None:
+        s = str(v).strip()
+        if not s:
+            return
+        if exclude and s == exclude:
+            return
+        if s in seen:
+            return
+        seen.add(s)
+        out.append(s)
+
+    for v in existing or []:
+        add_one(v)
+    for v in extra or []:
+        add_one(v)
+    return out
+
+
+def _find_heading_line_index(lines: list[str], heading: str) -> int | None:
+    target = f"[{heading}]"
+    for i, line in enumerate(lines):
+        if line.strip() == target:
+            return i
+    return None
+
+
+def _inject_lines_under_heading(prompt: str, heading: str, lines_to_add: list[str]) -> str:
+    if not prompt:
+        prompt = ""
+    lines = prompt.splitlines()
+    existing = {ln.strip() for ln in lines}
+    to_add = [ln.strip() for ln in lines_to_add if str(ln).strip() and str(ln).strip() not in existing]
+    if not to_add:
+        return prompt
+
+    idx = _find_heading_line_index(lines, heading)
+    if idx is None:
+        # No structured heading: append a new section at the end.
+        suffix = "\n".join([f"[{heading}]", *to_add])
+        if prompt.strip() == "":
+            return suffix
+        return (prompt.rstrip() + "\n\n" + suffix).rstrip()
+
+    insert_at = idx + 1
+    lines[insert_at:insert_at] = to_add
+    return "\n".join(lines).rstrip()
+
+
+def _asset_guides_character_refs_to_add(guides: AssetGuides, mode: str) -> list[str]:
+    mode_norm = (mode or "").strip().lower()
+    if mode_norm == "none":
+        return []
+    if mode_norm == "scene":
+        return []
+    if mode_norm == "all":
+        refs: list[str] = []
+        for entry in guides.character_bible:
+            refs.extend(entry.reference_images or [])
+        return _dedupe_keep_order(refs)
+
+    # auto: only apply when there's exactly one character entry (avoids accidentally mixing multiple identities)
+    if len(guides.character_bible) == 1:
+        return _dedupe_keep_order(list(guides.character_bible[0].reference_images or []))
+    return []
+
+
+def apply_asset_guides_to_scene(*, scene: SceneSpec, guides: AssetGuides, character_refs_mode: str) -> None:
+    """
+    Mutates scene in-place:
+    - merges assets.* reference images into scene.image_references
+    - injects assets.* prompt lines into scene.image_prompt (best-effort; uses headings when present)
+
+    This is an opt-in helper intended to reduce per-scene copy/paste while keeping prompts structured.
+    """
+
+    # references
+    style_refs = []
+    if guides.style_guide:
+        style_refs = guides.style_guide.reference_images or []
+
+    mode_norm = (character_refs_mode or "").strip().lower()
+    if mode_norm == "scene":
+        if scene.image_character_ids:
+            chosen = set(scene.image_character_ids)
+            char_refs = _dedupe_keep_order(
+                [ref for entry in guides.character_bible for ref in (entry.reference_images or []) if entry.character_id in chosen]
+            )
+        else:
+            char_refs = []
+    else:
+        char_refs = _asset_guides_character_refs_to_add(guides, character_refs_mode)
+
+    merged_refs = _merge_refs(scene.image_references or [], style_refs, exclude=scene.image_output)
+    merged_refs = _merge_refs(merged_refs, char_refs, exclude=scene.image_output)
+
+    # Add object/setpiece reference images based on explicit per-scene object_ids.
+    obj_refs: list[str] = []
+    chosen_object_ids = set(scene.image_object_ids or [])
+    if chosen_object_ids:
+        obj_refs = _dedupe_keep_order(
+            [
+                ref
+                for entry in (guides.object_bible or [])
+                for ref in (entry.reference_images or [])
+                if entry.object_id in chosen_object_ids
+            ]
+        )
+    merged_refs = _merge_refs(merged_refs, obj_refs, exclude=scene.image_output)
+    scene.image_references = merged_refs
+
+    # prompt injection
+    if not scene.image_prompt:
+        return
+
+    prompt = scene.image_prompt
+
+    global_lines: list[str] = []
+    if guides.style_guide and guides.style_guide.visual_style:
+        global_lines.append(guides.style_guide.visual_style)
+
+    avoid_lines: list[str] = []
+    if guides.style_guide and guides.style_guide.forbidden:
+        avoid_lines.extend(guides.style_guide.forbidden)
+
+    # Inject character fixed prompts only when that character is "active" for the scene:
+    # - either its reference images are used, or this scene is generating that reference image.
+    char_lines: list[str] = []
+    ref_set = set(merged_refs)
+    chosen_ids = set(scene.image_character_ids or [])
+    for entry in guides.character_bible or []:
+        if mode_norm == "scene" and chosen_ids:
+            is_active = entry.character_id in chosen_ids
+        else:
+            is_active = any(ref in ref_set for ref in (entry.reference_images or []))
+        if not is_active and scene.image_output and scene.image_output in (entry.reference_images or []):
+            is_active = True
+        if is_active and entry.fixed_prompts:
+            char_lines.extend(entry.fixed_prompts)
+
+    # Inject object/setpiece prompts only when that object is active for the scene.
+    prop_lines: list[str] = []
+    for entry in guides.object_bible or []:
+        if not entry.object_id:
+            continue
+
+        is_active = entry.object_id in chosen_object_ids
+        if not is_active:
+            is_active = any(ref in ref_set for ref in (entry.reference_images or []))
+        if not is_active and scene.image_output and scene.image_output in (entry.reference_images or []):
+            is_active = True
+        if not is_active:
+            continue
+
+        if entry.fixed_prompts:
+            prop_lines.extend(entry.fixed_prompts)
+        if entry.cinematic_role:
+            prop_lines.append(f"Cinematic role: {entry.cinematic_role}")
+        for v in entry.cinematic_visual_takeaways or []:
+            prop_lines.append(f"Conveys visually: {v}")
+        for s in entry.cinematic_spectacle_details or []:
+            prop_lines.append(f"Spectacle detail: {s}")
+
+    if global_lines:
+        prompt = _inject_lines_under_heading(prompt, "GLOBAL / INVARIANTS", global_lines)
+    if char_lines:
+        prompt = _inject_lines_under_heading(prompt, "CHARACTERS", char_lines)
+    if prop_lines:
+        prompt = _inject_lines_under_heading(prompt, "PROPS / SETPIECES", prop_lines)
+    if avoid_lines:
+        prompt = _inject_lines_under_heading(prompt, "AVOID", avoid_lines)
+
+    scene.image_prompt = prompt
+
+
+def validate_scene_character_ids(
+    *, scenes: list[SceneSpec], require: bool, mode: str, scene_filter: set[int] | None
+) -> None:
+    if not require:
+        return
+    if (mode or "").strip().lower() != "scene":
+        return
+    for scene in scenes:
+        if scene_filter is not None and int(scene.scene_id) not in scene_filter:
+            continue
+        if not scene.image_output or not scene.image_prompt:
+            continue
+        if not scene.image_character_ids_present:
+            raise SystemExit(
+                f"scene{scene.scene_id}: missing image_generation.character_ids. "
+                "For B-roll scenes, set an explicit empty list: character_ids: []."
+            )
+
+
+def validate_scene_object_ids(
+    *, scenes: list[SceneSpec], guides: AssetGuides, require: bool, scene_filter: set[int] | None
+) -> None:
+    if not require:
+        return
+    if not guides.object_bible:
+        return
+    for scene in scenes:
+        if scene_filter is not None and int(scene.scene_id) not in scene_filter:
+            continue
+        if not scene.image_output or not scene.image_prompt:
+            continue
+        if not scene.image_object_ids_present:
+            raise SystemExit(
+                f"scene{scene.scene_id}: missing image_generation.object_ids. "
+                "For scenes with no props/setpieces, set an explicit empty list: object_ids: []."
+            )
+
+
+def validate_object_reference_scenes(*, scenes: list[SceneSpec], guides: AssetGuides, require: bool) -> None:
+    if not require:
+        return
+    if not guides.object_bible:
+        return
+
+    outputs = {str(s.image_output) for s in scenes if s.image_output}
+
+    missing_required: list[str] = []
+    missing_outputs: list[str] = []
+    for entry in guides.object_bible or []:
+        if not entry.object_id:
+            missing_required.append("object_id is required (found null/empty).")
+            continue
+        if not entry.reference_images:
+            missing_required.append(f"{entry.object_id}: reference_images is required and must be non-empty.")
+        if not entry.fixed_prompts:
+            missing_required.append(f"{entry.object_id}: fixed_prompts is required and must be non-empty.")
+
+        for ref in entry.reference_images or []:
+            if ref not in outputs:
+                missing_outputs.append(f"{entry.object_id}:{ref}")
+
+    if missing_required:
+        raise SystemExit("assets.object_bible invalid:\n- " + "\n- ".join(missing_required))
+    if missing_outputs:
+        raise SystemExit(
+            "Missing object reference scenes: each assets.object_bible[].reference_images path must be generated "
+            "by some scenes[].image_generation.output.\n- " + "\n- ".join(missing_outputs)
+        )
+
+
 def _guess_image_suffix(mime_type: str | None) -> str:
     if not mime_type:
         return ".bin"
@@ -304,6 +832,123 @@ def _guess_image_suffix(mime_type: str | None) -> str:
 
 def _run(cmd: list[str]) -> None:
     subprocess.run(cmd, check=True)
+
+
+def _parse_csv_set(value: str | None) -> set[str]:
+    if not value:
+        return set()
+    items = []
+    for part in str(value).split(","):
+        s = part.strip().lower()
+        if not s:
+            continue
+        items.append(s)
+    return set(items)
+
+
+def _is_character_ref_path(path: Path) -> bool:
+    try:
+        return path.parent.name == "characters" and path.parent.parent.name == "assets"
+    except Exception:
+        return False
+
+
+def _is_object_ref_path(path: Path) -> bool:
+    try:
+        return path.parent.name == "objects" and path.parent.parent.name == "assets"
+    except Exception:
+        return False
+
+
+def _derive_character_view_path(front_path: Path, view: str) -> Path:
+    """
+    Derive a sibling filename for a character reference view.
+
+    Supports both:
+    - protagonist.png -> protagonist_side.png / protagonist_back.png
+    - protagonist_front.png -> protagonist_side.png / protagonist_back.png
+    """
+    view = (view or "").strip().lower()
+    if view == "front":
+        return front_path
+
+    suffix = front_path.suffix or ".png"
+    stem = front_path.stem
+    if stem.endswith("_front"):
+        root = stem[: -len("_front")]
+        return front_path.with_name(f"{root}_{view}{suffix}")
+    if stem.endswith(f"_{view}"):
+        return front_path
+    return front_path.with_name(f"{stem}_{view}{suffix}")
+
+
+def _derive_character_refstrip_path(front_path: Path, strip_suffix: str) -> Path:
+    suffix = front_path.suffix or ".png"
+    stem = front_path.stem
+    root = stem
+    for v in ("_front", "_side", "_back"):
+        if root.endswith(v):
+            root = root[: -len(v)]
+            break
+    return front_path.with_name(f"{root}{strip_suffix}{suffix}")
+
+
+def _is_character_refstrip_path(path: Path, strip_suffix: str) -> bool:
+    if not _is_character_ref_path(path):
+        return False
+    suff = (strip_suffix or "").strip()
+    if not suff:
+        return False
+    return path.stem.endswith(suff)
+
+
+def _ffmpeg_hstack_images(inputs: list[Path], out_path: Path, *, force: bool) -> None:
+    if out_path.exists() and not force:
+        return
+    if len(inputs) < 2:
+        raise ValueError("hstack requires at least 2 inputs")
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    cmd = ["ffmpeg", "-hide_banner", "-y"]
+    for p in inputs:
+        cmd += ["-i", str(p)]
+    cmd += [
+        "-filter_complex",
+        f"hstack=inputs={len(inputs)}",
+        "-frames:v",
+        "1",
+        "-update",
+        "1",
+        str(out_path),
+    ]
+    _run(cmd)
+
+
+def _character_view_prompt(base_prompt: str, view: str) -> str:
+    view_norm = (view or "").strip().lower()
+    if view_norm not in {"front", "side", "back"}:
+        return base_prompt
+
+    if view_norm == "front":
+        view_lines = [
+            "Character reference: FRONT view.",
+            "Full-body head-to-toe, feet fully visible (no cropping).",
+            "Neutral relaxed pose, arms at sides; centered framing; clean neutral background.",
+        ]
+    elif view_norm == "side":
+        view_lines = [
+            "Character reference: LEFT SIDE profile view.",
+            "Full-body head-to-toe, feet fully visible (no cropping).",
+            "Neutral relaxed pose; centered framing; clean neutral background.",
+        ]
+    else:  # back
+        view_lines = [
+            "Character reference: BACK view.",
+            "Full-body head-to-toe, feet fully visible (no cropping).",
+            "Neutral relaxed pose; centered framing; clean neutral background.",
+        ]
+
+    # Prefer structured injection under [SCENE]; fall back to appending.
+    return _inject_lines_under_heading(base_prompt, "SCENE", view_lines)
 
 
 def _ffmpeg_write_silence_mp3(out_path: Path, duration_seconds: int, force: bool) -> None:
@@ -391,7 +1036,7 @@ def generate_elevenlabs_tts(
         return
 
     if client is None:
-        raise SystemExit("ElevenLabs client not configured (missing ELEVENLABS_API_KEY / ELEVENLABS_VOICE_ID).")
+        raise SystemExit("ElevenLabs client not configured (missing ELEVENLABS_API_KEY).")
 
     try:
         audio = client.tts(
@@ -866,6 +1511,70 @@ def generate_veo_video(
     out_path.write_bytes(data)
 
 
+def generate_kling_video(
+    *,
+    client: KlingClient | None,
+    model: str,
+    prompt: str,
+    negative_prompt: str,
+    duration_seconds: int,
+    aspect_ratio: str,
+    resolution: str,
+    input_image: Path | None,
+    last_frame_image: Path | None,
+    out_path: Path,
+    poll_every: float,
+    timeout_seconds: float,
+    force: bool,
+    log_path: Path | None,
+    dry_run: bool,
+) -> None:
+    if out_path.exists() and not force:
+        return
+
+    if dry_run:
+        kind = "F2F" if (input_image and last_frame_image) else ("I2V" if input_image else "T2V")
+        print(f"[dry-run] VIDEO({kind}) {out_path} <- {model} ({duration_seconds}s, {aspect_ratio}, {resolution})")
+        return
+
+    if client is None:
+        raise SystemExit("Kling client not configured (missing KLING_API_KEY).")
+
+    try:
+        submit = client.start_video_generation(
+            prompt=prompt,
+            duration_seconds=int(duration_seconds),
+            aspect_ratio=aspect_ratio,
+            resolution=resolution,
+            input_image=input_image,
+            last_frame_image=last_frame_image,
+            negative_prompt=(negative_prompt.strip() or None),
+            model=model,
+            timeout_seconds=180.0,
+        )
+        operation_id = client.extract_operation_id(submit)
+        op = client.poll_operation(
+            operation_id_or_url=operation_id,
+            poll_every_seconds=float(poll_every),
+            timeout_seconds=float(timeout_seconds),
+        )
+    except (HttpError, TimeoutError, ValueError) as e:
+        raise SystemExit(str(e)) from e
+
+    if log_path:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        log_path.write_text(json.dumps({"submit": submit, "operation": op}, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    if client.is_failed_operation(op):
+        raise SystemExit(f"Kling operation failed: {json.dumps(op, ensure_ascii=False)}")
+
+    try:
+        video_uri = client.extract_video_uri(op)
+        client.download_to_file(uri=video_uri, out_path=out_path)
+    except (HttpError, ValueError) as e:
+        raise SystemExit(str(e)) from e
+
+
 def normalize_tool_name(tool: str | None) -> str:
     if not tool:
         return ""
@@ -902,6 +1611,78 @@ def main() -> None:
     parser.add_argument("--image-aspect-ratio", default=None)
     parser.add_argument("--image-prompt-prefix", default="", help="Optional text prepended to every image prompt.")
     parser.add_argument("--image-prompt-suffix", default="", help="Optional text appended to every image prompt.")
+    parser.add_argument(
+        "--apply-asset-guides",
+        action="store_true",
+        help="Merge manifest assets.character_bible/style_guide into per-scene prompts/references (best-effort).",
+    )
+    parser.add_argument(
+        "--asset-guides-character-refs",
+        choices=["scene", "auto", "all", "none"],
+        default="auto",
+        help='When applying asset guides, how to add character_bible.reference_images to each scene ("auto"=only if exactly 1 character).',
+    )
+    parser.add_argument(
+        "--log-prompts",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Write the final prompts to the provider log dir for reproducibility.",
+    )
+    parser.add_argument(
+        "--require-character-ids",
+        action="store_true",
+        help="When using --apply-asset-guides with --asset-guides-character-refs scene, require explicit character_ids per scene (use [] for B-roll).",
+    )
+    parser.add_argument(
+        "--require-object-ids",
+        action="store_true",
+        help="When using --apply-asset-guides with assets.object_bible, require explicit object_ids per scene (use [] when none).",
+    )
+    parser.add_argument(
+        "--require-object-reference-scenes",
+        action="store_true",
+        help="When assets.object_bible is present, require that each reference_images path is generated by some scene output.",
+    )
+    parser.add_argument(
+        "--character-reference-views",
+        default="",
+        help='For character reference scenes (assets/characters/*.png), also generate additional view images. Comma-separated: "front,side,back". Default: disabled.',
+    )
+    parser.add_argument(
+        "--character-reference-strip",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="When generating character reference views, also create a single horizontal strip image (front|side|back) for video references.",
+    )
+    parser.add_argument(
+        "--character-reference-strip-suffix",
+        default="_refstrip",
+        help='Suffix for the strip image filename (default: "_refstrip").',
+    )
+    parser.add_argument(
+        "--video-reference-prefer-character-refstrips",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="When generating videos, prefer the combined character ref strip images (if present) over individual character view refs.",
+    )
+    parser.add_argument(
+        "--image-batch-size",
+        type=int,
+        default=0,
+        help="Generate image scenes in batches of N (story scenes only; character ref scenes may be included automatically).",
+    )
+    parser.add_argument(
+        "--image-batch-index",
+        type=int,
+        default=1,
+        help="1-based batch index for --image-batch-size (e.g., size=10 index=1 generates the first 10 story scenes).",
+    )
+    parser.add_argument(
+        "--image-batch-include-character-refs",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="When using --image-batch-size, also generate missing character reference images (assets/characters/*) in the same run.",
+    )
 
     # SeaDream (Seedream 4.5, OpenAI Images compatible)
     parser.add_argument("--seadream-api-base", default=_env("SEADREAM_API_BASE", "https://ark.ap-southeast.bytepluses.com/api/v3"))
@@ -919,14 +1700,14 @@ def main() -> None:
     parser.add_argument(
         "--video-negative-prompt",
         default="",
-        help="Negative prompt for Veo (e.g., 'fade out, crossfade, cut to black').",
+        help="Negative prompt for video generation (provider-dependent).",
     )
     parser.add_argument("--poll-every", type=float, default=5.0)
     parser.add_argument("--timeout-seconds", type=float, default=900.0)
     parser.add_argument(
         "--enable-last-frame",
         action="store_true",
-        help="Try to pass last-frame conditioning to Veo using manifest last_frame (best-effort; may be unsupported).",
+        help="Try to pass last-frame conditioning using manifest last_frame (best-effort; provider-dependent).",
     )
     parser.add_argument(
         "--chain-first-frame-from-prev-video",
@@ -940,13 +1721,18 @@ def main() -> None:
         help="When chaining, extract the first frame from this many seconds before the end of the previous video.",
     )
 
+    # Kling
+    parser.add_argument("--kling-api-base", default=_env("KLING_API_BASE", "https://api.klingai.com"))
+    parser.add_argument("--kling-api-key", default=_env("KLING_API_KEY"))
+    parser.add_argument("--kling-video-model", default=_env("KLING_VIDEO_MODEL", "kling-3.0"))
+
     # logging
     parser.add_argument("--log-dir", default=None, help="Directory to write provider logs (default: <base>/logs/providers).")
 
     # ElevenLabs
     parser.add_argument("--elevenlabs-api-key", default=_env("ELEVENLABS_API_KEY"))
     parser.add_argument("--elevenlabs-api-base", default=_env("ELEVENLABS_API_BASE", "https://api.elevenlabs.io/v1"))
-    parser.add_argument("--elevenlabs-voice-id", default=_env("ELEVENLABS_VOICE_ID"))
+    parser.add_argument("--elevenlabs-voice-id", default=_env("ELEVENLABS_VOICE_ID", DEFAULT_ELEVENLABS_VOICE_ID))
     parser.add_argument("--elevenlabs-model-id", default=_env("ELEVENLABS_MODEL_ID", "eleven_multilingual_v2"))
     parser.add_argument("--elevenlabs-output-format", default=_env("ELEVENLABS_OUTPUT_FORMAT", "mp3_44100_128"))
     parser.add_argument("--tts-prompt-prefix", default="", help="Optional text prepended to every TTS input.")
@@ -961,7 +1747,61 @@ def main() -> None:
     base_dir = Path(args.base_dir) if args.base_dir else manifest_path.parent
     md = manifest_path.read_text(encoding="utf-8")
     yaml_text = extract_yaml_block(md)
-    metadata, scenes = parse_manifest_yaml(yaml_text)
+    metadata, guides, scenes = parse_manifest_yaml_full(yaml_text)
+
+    char_views = sorted(_parse_csv_set(args.character_reference_views))
+    allowed_views = {"front", "side", "back"}
+    unknown = [v for v in char_views if v not in allowed_views]
+    if unknown:
+        raise SystemExit(f"Unknown --character-reference-views values: {unknown}. Allowed: front,side,back")
+    # If the user asks for a ref strip, we must have all three views.
+    if args.character_reference_strip:
+        char_views = sorted(set(char_views) | {"front", "side", "back"})
+
+    # Expand character_bible reference_images to include derived view/strip filenames (opt-in).
+    # This keeps existing manifests compatible while letting story scenes automatically reference
+    # the additional turnaround views when using --apply-asset-guides.
+    if args.apply_asset_guides and (char_views or args.character_reference_strip):
+        expanded_cb: list[CharacterBibleEntry] = []
+        for entry in guides.character_bible or []:
+            refs = _dedupe_keep_order(list(entry.reference_images or []))
+            extra: list[str] = []
+            for ref in refs:
+                ref_p = Path(ref)
+                # only expand for assets/characters/* references
+                if "assets" not in ref_p.parts or "characters" not in ref_p.parts:
+                    continue
+                # derive views
+                for v in char_views:
+                    if v == "front":
+                        continue
+                    extra.append(str(_derive_character_view_path(ref_p, v)))
+                if args.character_reference_strip:
+                    extra.append(str(_derive_character_refstrip_path(ref_p, args.character_reference_strip_suffix)))
+            expanded = _dedupe_keep_order(refs + extra)
+            expanded_cb.append(
+                CharacterBibleEntry(
+                    character_id=entry.character_id,
+                    reference_images=expanded,
+                    fixed_prompts=list(entry.fixed_prompts or []),
+                    notes=entry.notes,
+                )
+            )
+        guides = AssetGuides(character_bible=expanded_cb, style_guide=guides.style_guide, object_bible=guides.object_bible)
+
+    if args.apply_asset_guides:
+        if yaml is None:
+            raise SystemExit("PyYAML is required for --apply-asset-guides (dependency: pyyaml).")
+        if not guides.character_bible and guides.style_guide is None:
+            print("[warn] --apply-asset-guides: no assets.character_bible/style_guide found in manifest.")
+        if len(guides.character_bible) > 1 and str(args.asset_guides_character_refs).strip().lower() == "auto":
+            print(
+                "[warn] --apply-asset-guides: assets.character_bible has multiple entries; "
+                "character refs will not be auto-added in 'auto' mode. "
+                "Use --asset-guides-character-refs all to force."
+            )
+        for scene in scenes:
+            apply_asset_guides_to_scene(scene=scene, guides=guides, character_refs_mode=args.asset_guides_character_refs)
 
     if not scenes:
         raise SystemExit("No scenes found in manifest YAML.")
@@ -969,6 +1809,24 @@ def main() -> None:
     scene_filter: set[int] | None = None
     if args.scene_ids:
         scene_filter = {int(x.strip()) for x in args.scene_ids.split(",") if x.strip()}
+
+    validate_scene_character_ids(
+        scenes=scenes,
+        require=bool(args.require_character_ids),
+        mode=args.asset_guides_character_refs,
+        scene_filter=scene_filter,
+    )
+    validate_scene_object_ids(
+        scenes=scenes,
+        guides=guides,
+        require=bool(args.require_object_ids),
+        scene_filter=scene_filter,
+    )
+    validate_object_reference_scenes(
+        scenes=scenes,
+        guides=guides,
+        require=bool(args.require_object_reference_scenes),
+    )
 
     aspect_ratio = (
         args.image_aspect_ratio
@@ -1011,6 +1869,15 @@ def main() -> None:
             for scene in scenes
         )
     )
+    needs_kling_video = (
+        not args.skip_videos
+        and any(
+            normalize_tool_name(scene.video_tool) in {"kling_3_0", "kling"}
+            and scene.video_output
+            and (scene_filter is None or scene.scene_id in scene_filter)
+            for scene in scenes
+        )
+    )
 
     gemini_client: GeminiClient | None = None
     if not args.dry_run and (needs_gemini_image or needs_gemini_video):
@@ -1022,6 +1889,18 @@ def main() -> None:
                 api_base=args.gemini_api_base,
                 image_model=args.gemini_image_model,
                 video_model=args.gemini_video_model,
+            )
+        )
+
+    kling_client: KlingClient | None = None
+    if not args.dry_run and needs_kling_video:
+        if not args.kling_api_key:
+            raise SystemExit("Missing KLING_API_KEY (required for Kling video generation).")
+        kling_client = KlingClient(
+            KlingConfig(
+                api_key=args.kling_api_key,
+                api_base=args.kling_api_base,
+                video_model=args.kling_video_model,
             )
         )
 
@@ -1048,24 +1927,87 @@ def main() -> None:
         if needs_elevenlabs:
             if not args.elevenlabs_api_key:
                 raise SystemExit("Missing ELEVENLABS_API_KEY (required for ElevenLabs TTS).")
-            if not args.elevenlabs_voice_id:
-                raise SystemExit("Missing ELEVENLABS_VOICE_ID (required for ElevenLabs TTS).")
-            if str(args.elevenlabs_voice_id).strip().lower() in {"your_voice_id", "voice_id_tbd", "tbd"}:
-                raise SystemExit(
-                    "ELEVENLABS_VOICE_ID looks like a placeholder. Set ELEVENLABS_VOICE_ID to a real ElevenLabs voice_id."
+            voice_id = str(args.elevenlabs_voice_id or "").strip()
+            if not voice_id:
+                voice_id = DEFAULT_ELEVENLABS_VOICE_ID
+            if voice_id.lower() in {"your_voice_id", "voice_id_tbd", "tbd"}:
+                print(
+                    "[warn] ELEVENLABS_VOICE_ID looks like a placeholder; falling back to default voice_id "
+                    f"({DEFAULT_ELEVENLABS_VOICE_ID})."
                 )
+                voice_id = DEFAULT_ELEVENLABS_VOICE_ID
+            args.elevenlabs_voice_id = voice_id
             elevenlabs_client = ElevenLabsClient(
                 ElevenLabsConfig(
                     api_key=args.elevenlabs_api_key,
                     api_base=args.elevenlabs_api_base,
-                    voice_id=args.elevenlabs_voice_id,
+                    voice_id=voice_id,
                     model_id=args.elevenlabs_model_id,
                     output_format=args.elevenlabs_output_format,
                 )
             )
 
     # Pass 1: images (allows later videos to reference other scene images, e.g. first/last frame conditioning).
+    image_scenes: list[SceneSpec] = []
     for scene in scenes:
+        if scene_filter is not None and scene.scene_id not in scene_filter:
+            continue
+        if args.skip_images or not scene.image_output or not scene.image_prompt:
+            continue
+        image_scenes.append(scene)
+
+    # Ensure reference images are generated first so later scenes can safely reference them.
+    def _image_scene_sort_key(s: SceneSpec) -> int:
+        outp = resolve_path(base_dir, s.image_output) if s.image_output else None
+        if outp and _is_character_ref_path(outp):
+            return 0
+        if outp and _is_object_ref_path(outp):
+            return 1
+        return 2
+
+    image_scenes.sort(key=_image_scene_sort_key)
+
+    if args.image_batch_size:
+        if int(args.image_batch_size) <= 0:
+            raise SystemExit("--image-batch-size must be a positive integer.")
+        if int(args.image_batch_index) <= 0:
+            raise SystemExit("--image-batch-index must be >= 1.")
+
+        char_ref_scenes: list[SceneSpec] = []
+        obj_ref_scenes: list[SceneSpec] = []
+        story_scenes: list[SceneSpec] = []
+        for s in image_scenes:
+            outp = resolve_path(base_dir, s.image_output) if s.image_output else None
+            if outp and _is_character_ref_path(outp):
+                char_ref_scenes.append(s)
+            elif outp and _is_object_ref_path(outp):
+                obj_ref_scenes.append(s)
+            else:
+                story_scenes.append(s)
+
+        start = (int(args.image_batch_index) - 1) * int(args.image_batch_size)
+        end = start + int(args.image_batch_size)
+        selected_story = story_scenes[start:end]
+
+        selected: list[SceneSpec] = []
+        if args.image_batch_include_character_refs:
+            for s in char_ref_scenes:
+                outp = resolve_path(base_dir, s.image_output) if s.image_output else None
+                if not outp:
+                    continue
+                # Avoid re-calling paid APIs unnecessarily; include only missing refs unless --force.
+                if args.force or args.dry_run or (not outp.exists()):
+                    selected.append(s)
+            for s in obj_ref_scenes:
+                outp = resolve_path(base_dir, s.image_output) if s.image_output else None
+                if not outp:
+                    continue
+                if args.force or args.dry_run or (not outp.exists()):
+                    selected.append(s)
+        selected.extend(selected_story)
+        image_scenes = selected
+
+    for scene in image_scenes:
         if scene_filter is not None and scene.scene_id not in scene_filter:
             continue
 
@@ -1089,6 +2031,8 @@ def main() -> None:
                 raise SystemExit(f"scene{scene.scene_id}: reference image not found: {ref_path}")
             refs.append(ref_path)
 
+        is_char_ref = bool(out_path and _is_character_ref_path(out_path))
+
         if tool in {"google_nanobanana_pro", "nanobanana_pro"}:
             prefix = (args.image_prompt_prefix or "").strip()
             suffix = (args.image_prompt_suffix or "").strip()
@@ -1097,6 +2041,76 @@ def main() -> None:
                 prompt = prefix + "\n\n" + prompt
             if suffix:
                 prompt = prompt + "\n\n" + suffix
+
+            if is_char_ref and (char_views or args.character_reference_strip):
+                # Turnaround: generate front/side/back images + optional ref strip.
+                views_to_generate = [v for v in ("front", "side", "back") if (v == "front" or v in char_views)]
+                if "front" not in views_to_generate:
+                    views_to_generate.insert(0, "front")
+
+                view_paths: dict[str, Path] = {"front": out_path}
+                for v in ("side", "back"):
+                    if v in views_to_generate:
+                        view_paths[v] = _derive_character_view_path(out_path, v)
+
+                # front first
+                front_prompt = _character_view_prompt(prompt, "front")
+                if args.log_prompts:
+                    log_dir.mkdir(parents=True, exist_ok=True)
+                    (log_dir / f"scene{scene.scene_id}_image_prompt.txt").write_text(front_prompt + "\n", encoding="utf-8")
+                generate_gemini_image(
+                    client=gemini_client,
+                    model=args.gemini_image_model,
+                    prompt=front_prompt,
+                    aspect_ratio=scene_aspect_ratio,
+                    image_size=scene_image_size,
+                    reference_images=refs,
+                    out_path=view_paths["front"],
+                    force=args.force,
+                    log_path=log_dir / f"scene{scene.scene_id}_image.json",
+                    dry_run=args.dry_run,
+                )
+
+                # side/back conditioned by the front reference when available
+                conditioned_refs = list(refs)
+                if view_paths["front"] not in conditioned_refs:
+                    conditioned_refs.append(view_paths["front"])
+
+                for v in ("side", "back"):
+                    if v not in view_paths:
+                        continue
+                    vprompt = _character_view_prompt(prompt, v)
+                    if args.log_prompts:
+                        log_dir.mkdir(parents=True, exist_ok=True)
+                        (log_dir / f"scene{scene.scene_id}_image_prompt_{v}.txt").write_text(vprompt + "\n", encoding="utf-8")
+                    generate_gemini_image(
+                        client=gemini_client,
+                        model=args.gemini_image_model,
+                        prompt=vprompt,
+                        aspect_ratio=scene_aspect_ratio,
+                        image_size=scene_image_size,
+                        reference_images=conditioned_refs,
+                        out_path=view_paths[v],
+                        force=args.force,
+                        log_path=log_dir / f"scene{scene.scene_id}_image_{v}.json",
+                        dry_run=args.dry_run,
+                    )
+
+                if args.character_reference_strip and all(k in view_paths for k in ("front", "side", "back")):
+                    strip_path = _derive_character_refstrip_path(out_path, args.character_reference_strip_suffix)
+                    if not args.dry_run:
+                        _ffmpeg_hstack_images(
+                            [view_paths["front"], view_paths["side"], view_paths["back"]],
+                            strip_path,
+                            force=args.force,
+                        )
+                    else:
+                        print(f"[dry-run] IMAGE {strip_path} <- hstack(front,side,back)")
+                continue
+
+            if args.log_prompts:
+                log_dir.mkdir(parents=True, exist_ok=True)
+                (log_dir / f"scene{scene.scene_id}_image_prompt.txt").write_text(prompt + "\n", encoding="utf-8")
             generate_gemini_image(
                 client=gemini_client,
                 model=args.gemini_image_model,
@@ -1110,10 +2124,52 @@ def main() -> None:
                 dry_run=args.dry_run,
             )
         elif tool in {"seadream", "seedream", "seedream_4_5", "byteplus_seedream_4_5"}:
+            base_prompt = scene.image_prompt.strip()
+            if is_char_ref and (char_views or args.character_reference_strip):
+                views_to_generate = [v for v in ("front", "side", "back") if (v == "front" or v in char_views)]
+                if "front" not in views_to_generate:
+                    views_to_generate.insert(0, "front")
+                view_paths: dict[str, Path] = {"front": out_path}
+                for v in ("side", "back"):
+                    if v in views_to_generate:
+                        view_paths[v] = _derive_character_view_path(out_path, v)
+
+                for v in views_to_generate:
+                    vprompt = _character_view_prompt(base_prompt, v)
+                    if args.log_prompts:
+                        log_dir.mkdir(parents=True, exist_ok=True)
+                        suffix_name = "" if v == "front" else f"_{v}"
+                        (log_dir / f"scene{scene.scene_id}_image_prompt{suffix_name}.txt").write_text(vprompt + "\n", encoding="utf-8")
+                    generate_seadream_image(
+                        client=seadream_client,
+                        model=args.seadream_model,
+                        prompt=vprompt,
+                        size=args.seadream_size,
+                        out_path=view_paths[v],
+                        force=args.force,
+                        log_path=log_dir / f"scene{scene.scene_id}_image{'' if v == 'front' else '_' + v}.json",
+                        dry_run=args.dry_run,
+                    )
+
+                if args.character_reference_strip and all(k in view_paths for k in ("front", "side", "back")):
+                    strip_path = _derive_character_refstrip_path(out_path, args.character_reference_strip_suffix)
+                    if not args.dry_run:
+                        _ffmpeg_hstack_images(
+                            [view_paths["front"], view_paths["side"], view_paths["back"]],
+                            strip_path,
+                            force=args.force,
+                        )
+                    else:
+                        print(f"[dry-run] IMAGE {strip_path} <- hstack(front,side,back)")
+                continue
+
+            if args.log_prompts:
+                log_dir.mkdir(parents=True, exist_ok=True)
+                (log_dir / f"scene{scene.scene_id}_image_prompt.txt").write_text(base_prompt + "\n", encoding="utf-8")
             generate_seadream_image(
                 client=seadream_client,
                 model=args.seadream_model,
-                prompt=scene.image_prompt,
+                prompt=base_prompt,
                 size=args.seadream_size,
                 out_path=out_path,
                 force=args.force,
@@ -1124,13 +2180,15 @@ def main() -> None:
             raise SystemExit(f"scene{scene.scene_id}: unsupported image tool: {scene.image_tool}")
 
     # Pass 2: videos
-    video_output_by_scene_id: dict[int, Path] = {}
-    for scene in scenes:
-        if not scene.video_output:
+    video_scenes_in_order: list[SceneSpec] = []
+    for s in scenes:
+        if scene_filter is not None and s.scene_id not in scene_filter:
             continue
-        resolved = resolve_path(base_dir, scene.video_output)
-        if resolved:
-            video_output_by_scene_id[int(scene.scene_id)] = resolved
+        if args.skip_videos or not s.video_output or not (s.video_motion_prompt or s.image_prompt):
+            continue
+        video_scenes_in_order.append(s)
+
+    video_scene_index_by_id: dict[int, int] = {int(s.scene_id): idx for idx, s in enumerate(video_scenes_in_order)}
 
     prev_chain_first_frame: Path | None = None
     for scene in scenes:
@@ -1145,9 +2203,6 @@ def main() -> None:
         if not out_path:
             raise SystemExit(f"scene{scene.scene_id}: missing video output path")
 
-        if tool != "google_veo_3_1":
-            raise SystemExit(f"scene{scene.scene_id}: unsupported video tool: {scene.video_tool}")
-
         dur = duration_from_timestamp_range(scene.timestamp, args.default_scene_seconds)
 
         input_image = resolve_path(base_dir, scene.video_first_frame or scene.video_input_image)
@@ -1158,21 +2213,24 @@ def main() -> None:
             # exactly where the previous clip ended (improves mp4 concat continuity).
             input_image = prev_chain_first_frame
         elif args.chain_first_frame_from_prev_video and prev_chain_first_frame is None:
-            # If the user is regenerating only a later scene via --scene-ids, we may have skipped the previous
-            # video generation. In that case, try to derive the chaining frame from the previous scene's video file.
-            prev_video = video_output_by_scene_id.get(int(scene.scene_id) - 1)
-            if prev_video and prev_video.exists() and not args.dry_run:
-                chain_frame = prev_video.with_name(prev_video.stem + "_chain_first_frame.png")
-                try:
-                    prev_chain_first_frame = _ffmpeg_extract_frame_from_end_best_effort(
-                        prev_video,
-                        chain_frame,
-                        seconds_from_end=float(args.chain_first_frame_seconds_from_end),
-                        force=True,
-                    )
-                    input_image = prev_chain_first_frame
-                except FileNotFoundError:
-                    prev_chain_first_frame = None
+            # If the user is regenerating only later scenes, we may have skipped the previous video generation.
+            # Don't assume contiguous numeric IDs; use manifest order to find the previous video scene.
+            idx = video_scene_index_by_id.get(int(scene.scene_id))
+            if idx is not None and idx > 0:
+                prev_scene = video_scenes_in_order[idx - 1]
+                prev_video = resolve_path(base_dir, prev_scene.video_output)
+                if prev_video and prev_video.exists() and not args.dry_run:
+                    chain_frame = prev_video.with_name(prev_video.stem + "_chain_first_frame.png")
+                    try:
+                        prev_chain_first_frame = _ffmpeg_extract_frame_from_end_best_effort(
+                            prev_video,
+                            chain_frame,
+                            seconds_from_end=float(args.chain_first_frame_seconds_from_end),
+                            force=True,
+                        )
+                        input_image = prev_chain_first_frame
+                    except FileNotFoundError:
+                        prev_chain_first_frame = None
         if input_image and not args.dry_run and not input_image.exists():
             raise SystemExit(f"scene{scene.scene_id}: first frame image not found: {input_image}")
 
@@ -1194,6 +2252,9 @@ def main() -> None:
             prompt = vprefix + "\n\n" + prompt
         if vsuffix:
             prompt = prompt + "\n\n" + vsuffix
+        if args.log_prompts:
+            log_dir.mkdir(parents=True, exist_ok=True)
+            (log_dir / f"scene{scene.scene_id}_video_prompt.txt").write_text(prompt + "\n", encoding="utf-8")
 
         video_ref_paths: list[Path] = []
         for ref_str in scene.image_references or []:
@@ -1204,19 +2265,83 @@ def main() -> None:
                 raise SystemExit(f"scene{scene.scene_id}: reference image not found: {ref_path}")
             video_ref_paths.append(ref_path)
 
-        segs, trim_to = _plan_veo_segments(dur)
-        if len(segs) == 1:
-            generate_veo_video(
-                client=gemini_client,
-                model=args.gemini_video_model,
+        if args.video_reference_prefer_character_refstrips:
+            non_char = [p for p in video_ref_paths if not _is_character_ref_path(p)]
+            char = [p for p in video_ref_paths if _is_character_ref_path(p)]
+            strips = [p for p in char if _is_character_refstrip_path(p, args.character_reference_strip_suffix)]
+            # If any strips are available, keep only strips for character references (reduces token/bandwidth and
+            # matches the intended "turnaround strip for video" workflow). Keep other non-character refs intact.
+            if strips:
+                video_ref_paths = non_char + strips
+
+        if tool == "google_veo_3_1":
+            segs, trim_to = _plan_veo_segments(dur)
+            if len(segs) == 1:
+                generate_veo_video(
+                    client=gemini_client,
+                    model=args.gemini_video_model,
+                    prompt=prompt,
+                    negative_prompt=args.video_negative_prompt or "",
+                    duration_seconds=segs[0],
+                    aspect_ratio=aspect_ratio,
+                    resolution=args.video_resolution,
+                    input_image=input_image,
+                    last_frame_image=last_image,
+                    reference_images=video_ref_paths,
+                    out_path=out_path,
+                    poll_every=args.poll_every,
+                    timeout_seconds=args.timeout_seconds,
+                    force=args.force,
+                    log_path=log_dir / f"scene{scene.scene_id}_video.json",
+                    dry_run=args.dry_run,
+                )
+            else:
+                if args.dry_run:
+                    print(f"[dry-run] VIDEO scene{scene.scene_id}: segments={segs} then trim_to={trim_to}")
+                else:
+                    with tempfile.TemporaryDirectory() as tmpdir:
+                        tmpdir_path = Path(tmpdir)
+                        seg_paths: list[Path] = []
+                        for idx, seg_dur in enumerate(segs, start=1):
+                            seg_out = tmpdir_path / f"scene{scene.scene_id}_seg{idx}.mp4"
+                            generate_veo_video(
+                                client=gemini_client,
+                                model=args.gemini_video_model,
+                                prompt=prompt,
+                                negative_prompt=args.video_negative_prompt or "",
+                                duration_seconds=seg_dur,
+                                aspect_ratio=aspect_ratio,
+                                resolution=args.video_resolution,
+                                input_image=input_image,
+                                last_frame_image=last_image,
+                                reference_images=video_ref_paths,
+                                out_path=seg_out,
+                                poll_every=args.poll_every,
+                                timeout_seconds=args.timeout_seconds,
+                                force=True,
+                                log_path=log_dir / f"scene{scene.scene_id}_video_seg{idx}.json",
+                                dry_run=False,
+                            )
+                            seg_paths.append(seg_out)
+
+                        concat_path = tmpdir_path / f"scene{scene.scene_id}_concat.mp4"
+                        _ffmpeg_concat_videos(seg_paths, concat_path)
+                        if trim_to:
+                            _ffmpeg_trim_video(concat_path, out_path, int(trim_to))
+                        else:
+                            out_path.parent.mkdir(parents=True, exist_ok=True)
+                            out_path.write_bytes(concat_path.read_bytes())
+        elif tool in {"kling_3_0", "kling"}:
+            generate_kling_video(
+                client=kling_client,
+                model=args.kling_video_model,
                 prompt=prompt,
                 negative_prompt=args.video_negative_prompt or "",
-                duration_seconds=segs[0],
+                duration_seconds=int(dur),
                 aspect_ratio=aspect_ratio,
                 resolution=args.video_resolution,
                 input_image=input_image,
                 last_frame_image=last_image,
-                reference_images=video_ref_paths,
                 out_path=out_path,
                 poll_every=args.poll_every,
                 timeout_seconds=args.timeout_seconds,
@@ -1225,41 +2350,7 @@ def main() -> None:
                 dry_run=args.dry_run,
             )
         else:
-            if args.dry_run:
-                print(f"[dry-run] VIDEO scene{scene.scene_id}: segments={segs} then trim_to={trim_to}")
-            else:
-                with tempfile.TemporaryDirectory() as tmpdir:
-                    tmpdir_path = Path(tmpdir)
-                    seg_paths: list[Path] = []
-                    for idx, seg_dur in enumerate(segs, start=1):
-                        seg_out = tmpdir_path / f"scene{scene.scene_id}_seg{idx}.mp4"
-                        generate_veo_video(
-                            client=gemini_client,
-                            model=args.gemini_video_model,
-                            prompt=prompt,
-                            negative_prompt=args.video_negative_prompt or "",
-                            duration_seconds=seg_dur,
-                            aspect_ratio=aspect_ratio,
-                            resolution=args.video_resolution,
-                            input_image=input_image,
-                            last_frame_image=last_image,
-                            reference_images=video_ref_paths,
-                            out_path=seg_out,
-                            poll_every=args.poll_every,
-                            timeout_seconds=args.timeout_seconds,
-                            force=True,
-                            log_path=log_dir / f"scene{scene.scene_id}_video_seg{idx}.json",
-                            dry_run=False,
-                        )
-                        seg_paths.append(seg_out)
-
-                    concat_path = tmpdir_path / f"scene{scene.scene_id}_concat.mp4"
-                    _ffmpeg_concat_videos(seg_paths, concat_path)
-                    if trim_to:
-                        _ffmpeg_trim_video(concat_path, out_path, int(trim_to))
-                    else:
-                        out_path.parent.mkdir(parents=True, exist_ok=True)
-                        out_path.write_bytes(concat_path.read_bytes())
+            raise SystemExit(f"scene{scene.scene_id}: unsupported video tool: {scene.video_tool}")
 
         if args.chain_first_frame_from_prev_video:
             if args.dry_run:
@@ -1305,7 +2396,7 @@ def main() -> None:
             normalize_dur = dur if scene.narration_normalize_to_scene_duration else None
             generate_elevenlabs_tts(
                 client=elevenlabs_client,
-                voice_id=args.elevenlabs_voice_id or "VOICE_ID_TBD",
+                voice_id=str((args.elevenlabs_voice_id or DEFAULT_ELEVENLABS_VOICE_ID)),
                 model_id=args.elevenlabs_model_id or "eleven_multilingual_v2",
                 output_format=args.elevenlabs_output_format or "mp3_44100_128",
                 text=tts_text,

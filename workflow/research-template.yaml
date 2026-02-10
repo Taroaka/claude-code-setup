@@ -1,4 +1,8 @@
 # Minimal research output template (from docs/information-gathering.md)
+#
+# NOTE:
+# - これはMVP向けの最小スキーマ。
+# - 情報量を最大化したい場合は `workflow/research-template.production.yaml` を推奨。
 topic: "string"
 aliases: ["string"]
 

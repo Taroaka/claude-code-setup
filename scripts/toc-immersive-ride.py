@@ -4,7 +4,7 @@ Scaffold a run folder for the immersive ride POV workflow (/toc-immersive-ride).
 
 This script is intentionally a helper:
 - It creates output/<topic>_<timestamp>/ with standard files and folders
-- It writes a draft video_manifest.md based on workflow/immersive-ride-video-manifest-template.md
+- It writes a draft video_manifest.md based on an experience-specific template in workflow/
 - It does NOT call external generation APIs
 """
 
@@ -14,6 +14,11 @@ import argparse
 import datetime as dt
 import re
 from pathlib import Path
+
+EXPERIENCE_TEMPLATES: dict[str, Path] = {
+    "ride_action_boat": Path("workflow/immersive-ride-video-manifest-template.md"),
+    "cloud_island_walk": Path("workflow/immersive-cloud-island-walk-video-manifest-template.md"),
+}
 
 
 def sanitize_topic(topic: str) -> str:
@@ -54,6 +59,18 @@ def main() -> None:
     parser.add_argument("--timestamp", default=None, help="Timestamp (YYYYMMDD_HHMM).")
     parser.add_argument("--base", default="output", help="Base output directory.")
     parser.add_argument("--run-dir", default=None, help="Override run directory path.")
+    parser.add_argument(
+        "--experience",
+        choices=sorted(EXPERIENCE_TEMPLATES.keys()),
+        default="ride_action_boat",
+        help="Experience template to scaffold (default: ride_action_boat).",
+    )
+    parser.add_argument(
+        "--video-tool",
+        choices=["veo", "kling"],
+        default="veo",
+        help='Video generation tool in manifest ("veo" or "kling").',
+    )
     parser.add_argument("--force", action="store_true", help="Overwrite existing files.")
     args = parser.parse_args()
 
@@ -66,6 +83,7 @@ def main() -> None:
 
     # assets
     (run_dir / "assets" / "characters").mkdir(parents=True, exist_ok=True)
+    (run_dir / "assets" / "objects").mkdir(parents=True, exist_ok=True)
     (run_dir / "assets" / "styles").mkdir(parents=True, exist_ok=True)
     (run_dir / "assets" / "scenes").mkdir(parents=True, exist_ok=True)
     (run_dir / "assets" / "audio").mkdir(parents=True, exist_ok=True)
@@ -80,6 +98,7 @@ def main() -> None:
                 "topic": topic_raw,
                 "status": "INIT",
                 "runtime.stage": "immersive_ride_scaffold",
+                "immersive.experience": str(args.experience),
             },
         )
 
@@ -87,10 +106,18 @@ def main() -> None:
     write_text(run_dir / "story.md", "# Story Script Output\n\nTBD\n", force=args.force)
     write_text(run_dir / "script.md", "# Script Output (Immersive Ride POV)\n\nTBD\n", force=args.force)
 
-    template_path = Path("workflow/immersive-ride-video-manifest-template.md")
+    template_path = EXPERIENCE_TEMPLATES.get(str(args.experience))
+    if template_path is None:
+        raise SystemExit(f"Unknown --experience: {args.experience}")
     if template_path.exists():
         tmpl = template_path.read_text(encoding="utf-8")
-        tmpl = tmpl.replace("<topic>", topic_raw).replace("<timestamp>", ts)
+        tmpl = (
+            tmpl.replace("<topic>", topic_raw)
+            .replace("<timestamp>", ts)
+            .replace("<ISO8601>", now_iso())
+        )
+        if args.video_tool == "kling":
+            tmpl = re.sub(r'(?m)^(\s*)tool: "google_veo_3_1"\s*$', r'\1tool: "kling_3_0"', tmpl)
         write_text(run_dir / "video_manifest.md", tmpl, force=args.force)
     else:
         write_text(run_dir / "video_manifest.md", "# Video Manifest\n\nTBD\n", force=args.force)
@@ -102,6 +129,7 @@ def main() -> None:
             "topic": topic_raw,
             "status": "DONE",
             "runtime.stage": "immersive_ride_scaffolded",
+            "immersive.experience": str(args.experience),
             "artifact.video_manifest": str((run_dir / "video_manifest.md").resolve()),
         },
     )
@@ -111,4 +139,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

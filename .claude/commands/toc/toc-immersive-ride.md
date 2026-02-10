@@ -8,22 +8,42 @@ ToC（TikTok Story Creator）で「没入型（First-person POV）実写シネ�
 /toc-immersive-ride --topic "桃太郎"
 ```
 
+哲学的な概念を「雲上の島を歩いて理解を深める」パターンで作る場合:
+
+```text
+/toc-immersive-ride --topic "自由意志" --experience cloud_island_walk
+```
+
 台本/マニフェストまでで止めたい場合:
 
 ```text
 /toc-immersive-ride --topic "桃太郎" --stage script
 ```
 
-## コンセプト（固定）
+## コンセプト（experience別）
+
+共通:
 
 - First-person POV（一人称視点）
-- テーマパークの “ride action boat” に乗ってトピック世界を巡る
-- 実写風シネマティック（アニメ調排除）
+- 実写風シネマティック（photorealistic / cinematic / practical effects）
+- ガイドは **音声（ナレーション）として必須**（視覚的に登場させない）
+
+`ride_action_boat`（default）:
+
+- テーマパークの “ride action boat” でトピック世界を巡る
 - 統一要素:
   - 20代女性の手
   - ornate brass safety bar
-  - 乗り物（線路に沿って進む）
-  - キャラクター（毎scene必ず登場）
+  - 乗り物（線路/ガイドに沿って進む）
+  - 物語キャラクター（毎scene必ず登場）
+
+`cloud_island_walk`:
+
+- 「雲の上に浮かぶ島（概念の楽園）」に到着し、歩みを進めるほど理解が深まる構成
+- 統一要素（推奨）:
+  - 島の各ゾーンを“概念の比喩（物理メタファ）”として設計する（文字で説明しない）
+  - 道/階段/橋など「前進の導線」が常に画面にある（scene間の連続性を作る）
+  - POV の連続性は構図で固定する（地平線の安定、path/leading lines をセンター、一定のカメラ高さ）
 
 ## 期待される出力（概要）
 
@@ -55,6 +75,12 @@ $ARGUMENTS:
 - `--stage video|script` (optional, default: `video`)
   - `video`: 完成動画まで生成する（API + ffmpeg を含む）
   - `script`: `research.md` / `story.md` / `script.md` / `video_manifest.md` まで作って止める
+- `--experience ride_action_boat|cloud_island_walk` (optional, default: `ride_action_boat`)
+  - `ride_action_boat`: 従来のテーマパーク・ライド（ボート/安全バー）パターン
+  - `cloud_island_walk`: 雲上の島を歩いて理解を深める（哲学/概念の比喩）パターン
+- `--video-tool veo|kling` (optional, default: `veo`)
+  - `veo`: `video_manifest.md` の `scenes[].video_generation.tool` を `google_veo_3_1` にする
+  - `kling`: `video_manifest.md` の `scenes[].video_generation.tool` を `kling_3_0` にする
 
 ## 実行手順（このコマンドが実行すること）
 
@@ -84,23 +110,33 @@ scripts/toc-immersive-ride-generate.sh --run-dir output/<topic>_<timestamp>
 メモ:
 - 生成のシームレス性を上げるため、`last_frame` 制約 + chaining（前動画終盤フレームを次の first frame に使用）+ ネガティブプロンプトを併用する
 - 音声が無い場合はサイレント動画として書き出す
+- 後から中間scene（例: 35）を差し込めるように、`scene_id` は **10刻み**（例: 10,20,30...）を推奨（後段はmanifest順を正とする）
+- コスト/反復のため、画像は `--image-batch-size 10 --image-batch-index 1` のように **10枚ずつ**生成して進められる
 
 ## 重要な原則（プロンプト要件）
 
 ### DO
 
-- 全プロンプトに必ず入れる:
-  - `First-person POV from ride action boat`
-  - `Realistic hands gripping ornate brass safety bar`
-- 参照画像を全生成に含める（キャラクター・手/バー/ボート）
+- 全プロンプトに必ず入れる（invariants）:
+  - `First-person POV ...`（experience に合わせて明示する: `ride_action_boat`=boat/vehicle, `cloud_island_walk`=walking forward）
+  - `No on-screen text`（映像だけで伝える）
+  - `Realistic hands ...`（`ride_action_boat` では必須。`cloud_island_walk` は必須ではない）
+- 参照画像を全生成に含める（キャラクター・手元アンカー・必要なら乗り物/環境の参照）
 - scene間の連続性（照明・雰囲気・位置関係の自然な遷移）
-- ボートは必ず **アトラクションの線路** に沿って進む
+- `ride_action_boat`: 乗り物は必ず **アトラクションの線路/ガイド** に沿って進む（隠し方は driftwood 等でOK）
+- `cloud_island_walk`: 道/橋/階段など「前進の導線」を常に画面内に置く（歩み＝理解の進行）
+
+キャラクター参照（turnaround）:
+- `assets/characters/<id>.png`（または `<id>_front.png`）を1枚用意し、
+  `scripts/toc-immersive-ride-generate.sh`（内部で `--character-reference-views front,side,back --character-reference-strip`）で
+  `*_side.png` / `*_back.png` / `*_refstrip.png` を自動生成して動画側の参照に使う。
 
 ### DON'T
 
 - `animated / animation / cartoon / anime / illustrated / drawing`
 - `Studio Ghibli style`
-- 視点のブレ（手とバーが常に画面内）
+- 視点のブレ（前進の導線が消える、地平線が揺れる、カメラ高さが変わる）
+- `cloud_island_walk` での禁止: `third-person / over-the-shoulder / selfie`（外側カメラへの切替）
 
 ## 参照
 

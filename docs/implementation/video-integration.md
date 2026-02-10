@@ -31,7 +31,7 @@
 
 ## プレースホルダ（MVP）
 
-プロバイダは決定済み（Google Nano Banana Pro / Veo 3.1）。ただしMVPでは:
+プロバイダは当面、manifestで選べる（例: Google Nano Banana Pro / Veo 3.1 / Kling 3.0）。ただしMVPでは:
 
 - placeholder でE2Eを通す（`scripts/generate-placeholder-assets.py`）
 - 生成APIで素材化する（`scripts/generate-assets-from-manifest.py`）

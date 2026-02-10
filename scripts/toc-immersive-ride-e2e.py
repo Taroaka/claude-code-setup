@@ -31,6 +31,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from toc.env import load_env_files  # noqa: E402
+from toc.providers.elevenlabs import DEFAULT_ELEVENLABS_VOICE_ID  # noqa: E402
 
 
 def sanitize_topic(topic: str) -> str:
@@ -69,6 +70,7 @@ def build_manifest_from_script(
     created_at: str,
     scenes: list[dict],
     max_scenes: int | None,
+    video_tool: str,
     out_path: Path,
 ) -> None:
     selected = scenes[: max_scenes or len(scenes)]
@@ -95,14 +97,14 @@ def build_manifest_from_script(
         "assets": {
             "character_bible": [
                 {
-                    "character_id": "guide_character",
-                    "reference_images": ["assets/characters/guide_character.png"],
+                    "character_id": "protagonist",
+                    "reference_images": ["assets/characters/protagonist_front.png"],
                     "fixed_prompts": [
                         "photorealistic, cinematic, practical effects, 8K quality, ultra detailed textures",
                         "First-person POV from ride action boat",
                         "Realistic hands gripping ornate brass safety bar",
                     ],
-                    "notes": "Generate this character image first and reuse as reference in every scene image.",
+                    "notes": "Generate character turnaround references first and reuse as reference in scenes where this character appears.",
                 }
             ],
             "style_guide": {
@@ -114,7 +116,7 @@ def build_manifest_from_script(
         "scenes": [],
     }
 
-    # scene 0: guide character reference
+    # scene 0: protagonist character reference (turnaround; guide is narration-only)
     manifest["scenes"].append(
         {
             "scene_id": 0,
@@ -122,10 +124,10 @@ def build_manifest_from_script(
             "image_generation": {
                 "tool": "google_nanobanana_pro",
                 "prompt": (
-                    "Photorealistic cinematic portrait of the guide character for the ride story.\n"
-                    "No text in image. Realistic lighting, practical effects feel."
+                    "Photorealistic cinematic full-body character reference for the story protagonist.\n"
+                    "Head-to-toe, feet visible, neutral background, neutral pose. No text in image."
                 ),
-                "output": "assets/characters/guide_character.png",
+                "output": "assets/characters/protagonist_front.png",
                 "aspect_ratio": "16:9",
                 "image_size": "2K",
                 "references": [],
@@ -137,6 +139,7 @@ def build_manifest_from_script(
 
     # scene images + transitions
     for idx, s in enumerate(selected, start=1):
+        scene_id = idx * 10
         visual = s.get("visual") or {}
         loc = (visual.get("location") or {}) if isinstance(visual, dict) else {}
 
@@ -157,7 +160,7 @@ def build_manifest_from_script(
                 f"Setting: {setting or 'TBD'}.",
                 f"Time: {time_of_day or 'TBD'}. Weather: {weather or 'TBD'}.",
                 ("Props: " + ", ".join(str(p) for p in props[:12])) if props else "Props: TBD.",
-                "Do not depict children. Use adult guide character only.",
+                "Do not depict children. Use adult protagonist only (no visual guide character).",
             ]
         ).strip()
 
@@ -168,15 +171,19 @@ def build_manifest_from_script(
             motion_prompt = "Ride action boat moves forward smoothly along the track; " + motion_prompt
 
         item: dict = {
-            "scene_id": idx,
+            "scene_id": scene_id,
             "timestamp": f"00:{(idx-1)*8:02d}-00:{idx*8:02d}",
             "image_generation": {
                 "tool": "google_nanobanana_pro",
                 "prompt": gen_prompt,
-                "output": f"assets/scenes/scene{idx}.png",
+                "output": f"assets/scenes/scene{scene_id}.png",
                 "aspect_ratio": "16:9",
                 "image_size": "2K",
-                "references": ["assets/characters/guide_character.png"],
+                "references": [
+                    "assets/characters/protagonist_front.png",
+                    "assets/characters/protagonist_side.png",
+                    "assets/characters/protagonist_back.png",
+                ],
                 "iterations": 4,
                 "selected": None,
             },
@@ -184,13 +191,14 @@ def build_manifest_from_script(
 
         # transitions (idx -> idx+1)
         if idx < len(selected):
+            next_scene_id = (idx + 1) * 10
             item["video_generation"] = {
-                "tool": "google_veo_3_1",
+                "tool": video_tool,
                 "duration_seconds": 8,
-                "first_frame": f"assets/scenes/scene{idx}.png",
-                "last_frame": f"assets/scenes/scene{idx+1}.png",
+                "first_frame": f"assets/scenes/scene{scene_id}.png",
+                "last_frame": f"assets/scenes/scene{next_scene_id}.png",
                 "motion_prompt": motion_prompt,
-                "output": f"assets/scenes/scene{idx}_to_{idx+1}.mp4",
+                "output": f"assets/scenes/scene{scene_id}_to_{next_scene_id}.mp4",
             }
 
         # single narration track (attach to first generated scene)
@@ -248,6 +256,12 @@ def main() -> None:
         default=0.042,
         help="When chaining videos, extract the next first-frame from this many seconds before the previous video's end.",
     )
+    parser.add_argument(
+        "--video-tool",
+        choices=["veo", "kling"],
+        default="veo",
+        help='Video generation tool in manifest ("veo" uses google_veo_3_1, "kling" uses kling_3_0).',
+    )
 
     # Prompt overrides applied at API-call time (not baked into manifest).
     parser.add_argument(
@@ -303,15 +317,24 @@ def main() -> None:
         args.skip_audio = True
 
     # Preflight (avoid paid mistakes)
-    must_env("GEMINI_API_KEY")
+    if not args.videos_only:
+        must_env("GEMINI_API_KEY")
+    if args.video_tool == "veo":
+        must_env("GEMINI_API_KEY")
+    elif args.video_tool == "kling":
+        must_env("KLING_API_KEY")
     voice_id = ""
     if not args.skip_audio:
         must_env("ELEVENLABS_API_KEY")
         voice_id = (args.elevenlabs_voice_id or os.environ.get("ELEVENLABS_VOICE_ID") or "").strip()
         if not voice_id:
-            raise SystemExit("Missing ELEVENLABS_VOICE_ID (or pass --elevenlabs-voice-id).")
+            voice_id = DEFAULT_ELEVENLABS_VOICE_ID
         if voice_id.lower() in {"your_voice_id", "voice_id_tbd", "tbd"}:
-            raise SystemExit("ELEVENLABS_VOICE_ID is a placeholder. Pass a real id via --elevenlabs-voice-id or update .env.")
+            print(
+                "[warn] ELEVENLABS_VOICE_ID is a placeholder; falling back to default voice_id "
+                f"({DEFAULT_ELEVENLABS_VOICE_ID})."
+            )
+            voice_id = DEFAULT_ELEVENLABS_VOICE_ID
 
     source_script = Path(args.source_script)
     if not source_script.exists():
@@ -342,6 +365,7 @@ def main() -> None:
         created_at=dt.datetime.now().astimezone().isoformat(timespec="seconds"),
         scenes=scenes,
         max_scenes=int(args.max_scenes) if args.max_scenes else None,
+        video_tool=("kling_3_0" if args.video_tool == "kling" else "google_veo_3_1"),
         out_path=manifest_path,
     )
 
@@ -367,6 +391,9 @@ def main() -> None:
             "16:9",
             "--video-resolution",
             "720p",
+            "--character-reference-views",
+            "front,side,back",
+            "--character-reference-strip",
             "--image-prompt-prefix",
             args.image_prompt_prefix,
             "--image-prompt-suffix",

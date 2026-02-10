@@ -376,7 +376,7 @@ def render_scene_manifest_md(
         "      iterations: 4",
         "      selected: null",
         "    video_generation:",
-        '      tool: "google_veo_3_1"',
+        f'      tool: "{video_tool}"',
         f'      input_image: "assets/scenes/scene{scene_id}_base.png"',
         f'      motion_prompt: "{motion_prompt}"',
         f'      output: "assets/scenes/scene{scene_id}_video.mp4"',
@@ -429,6 +429,12 @@ def main() -> None:
         action="store_true",
         help="Also generate placeholder assets and render per-scene videos (no external API).",
     )
+    parser.add_argument(
+        "--video-tool",
+        choices=["veo", "kling"],
+        default="veo",
+        help='Video generation tool in manifests ("veo" uses google_veo_3_1, "kling" uses kling_3_0).',
+    )
 
     args = parser.parse_args()
 
@@ -438,6 +444,7 @@ def main() -> None:
 
     run_dir = Path(args.run_dir) if args.run_dir else (Path(args.base) / f"{topic_slug}_{ts}")
     ensure_dir(run_dir)
+    video_tool = "kling_3_0" if args.video_tool == "kling" else "google_veo_3_1"
 
     # run-root defaults
     state_path = run_dir / "state.txt"
@@ -573,4 +580,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

@@ -8,6 +8,12 @@ ToC（TikTok Story Creator）を「topic → 情報収集 → sceneごとのQ&A�
 /toc-scene-series "桃太郎" --min-seconds 30 --max-seconds 60
 ```
 
+動画モデル指定（例: Kling）:
+
+```text
+/toc-scene-series "桃太郎" --video-tool kling --min-seconds 30 --max-seconds 60
+```
+
 部分実行（例: scene 2 と 4 だけ作り直す）:
 
 ```text

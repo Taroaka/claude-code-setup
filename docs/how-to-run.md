@@ -82,7 +82,8 @@ output/<topic>_<timestamp>/
 
 - 画像: Google Nano Banana Pro（Gemini Image / `gemini-3-pro-image-preview`）
 - 画像（代替）: SeaDream / Seedream 4.5（`tool: "seadream"` + `SEADREAM_*`）
-- 動画: Google Veo 3.1（`veo-3.1-generate-preview`）
+- 動画: Google Veo 3.1（`video_generation.tool: "google_veo_3_1"`）
+- 動画（代替）: Kling 3.0（`video_generation.tool: "kling_3_0"` + `KLING_*`）
 - TTS: ElevenLabs
 - 当面は `video_manifest.md` を入力に素材生成→結合でフローを検証する
 - 具体は `docs/implementation/video-integration.md` を参照
@@ -92,6 +93,9 @@ output/<topic>_<timestamp>/
 ```bash
 python scripts/generate-assets-from-manifest.py \
   --manifest output/momotaro_20260110_1700/video_manifest.md \
+  --character-reference-views front,side,back \
+  --character-reference-strip \
+  --image-batch-size 10 --image-batch-index 1 \
   # --skip-audio を外すと ElevenLabs でナレーション生成も行う
 
 python scripts/build-clip-lists.py \

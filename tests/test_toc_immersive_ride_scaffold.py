@@ -39,7 +39,40 @@ class TestTocImmersiveRideScaffold(unittest.TestCase):
             self.assertTrue((run_dir / "assets" / "scenes").is_dir())
             self.assertTrue((run_dir / "assets" / "audio").is_dir())
 
+    def test_scaffold_cloud_island_experience_uses_template(self) -> None:
+        import tempfile
+
+        with tempfile.TemporaryDirectory(prefix="toc_test_out_") as td:
+            base = Path(td) / "out"
+            base.mkdir(parents=True, exist_ok=True)
+
+            subprocess.run(
+                [
+                    sys.executable,
+                    "scripts/toc-immersive-ride.py",
+                    "--topic",
+                    "テスト トピック",
+                    "--timestamp",
+                    "20990101_0000",
+                    "--base",
+                    str(base),
+                    "--experience",
+                    "cloud_island_walk",
+                    "--force",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+
+            run_dir = base / "テスト_トピック_20990101_0000"
+            manifest_path = run_dir / "video_manifest.md"
+            self.assertTrue(manifest_path.exists())
+            manifest = manifest_path.read_text(encoding="utf-8")
+            self.assertIn('experience: "cloud_island_walk"', manifest)
+            self.assertIn("First-person POV walking forward", manifest)
+            self.assertIn("on-screen text", manifest)
+
 
 if __name__ == "__main__":
     unittest.main()
-

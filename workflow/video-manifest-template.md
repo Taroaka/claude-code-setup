@@ -23,6 +23,7 @@ assets:
       reference_images:
         - "assets/characters/protagonist_front.png"
         - "assets/characters/protagonist_side.png"
+        - "assets/characters/protagonist_back.png"
       fixed_prompts:
         - "short black hair"
         - "traditional japanese attire"
@@ -40,11 +41,21 @@ scenes:
       # tool: "google_nanobanana_pro"
       # tool: "seadream"        # Seedream 4.5 (OpenAI Images compatible; see SEADREAM_* env)
       tool: "google_nanobanana_pro"
-      prompt: "quiet rural village at dawn"
+      prompt: |
+        [GLOBAL / INVARIANTS]
+        Cinematic, warm tones. Natural lighting. No text, no subtitles, no watermark.
+
+        [SCENE]
+        Quiet rural village at dawn. Soft morning fog. Wide establishing shot.
+
+        [AVOID]
+        text, watermark, logo.
       output: "assets/scenes/scene1_base.png"
       iterations: 4
       selected: 1
     video_generation:
+      # tool: "google_veo_3_1"
+      # tool: "kling_3_0"
       tool: "google_veo_3_1"
       input_image: "assets/scenes/scene1_base.png"
       motion_prompt: "slow pan"

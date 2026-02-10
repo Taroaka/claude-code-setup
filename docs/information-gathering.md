@@ -56,6 +56,25 @@ story/script が薄くなる（使い所が無いので捨てられる）か、�
 - `scene_plan`（scene_idごとの beat / emotion / 役割）
 - hooks/tension/open_questions/facts の各項目に `scene_ids: [...]` を付与
 
+## 推奨: 出力量の目安（後から削る前提）
+
+この段階は情報を「増やせる」のが最大の価値。後段で削れるよう、まず厚めに出す。
+
+目安（トピックの難易度で増減）:
+
+- sources: **12–30件**（URL/出典名を必ず残す）
+- story baseline:
+  - canonical synopsis: 5–10行
+  - beat sheet: **20–40個**
+- scene plan: **scene_id 1..20 を埋める**
+- hooks: 10–25個（各hookに scene_ids を付与）
+- facts: 30–80個（各factに sources + confidence）
+
+テンプレ運用:
+
+- 最小: `workflow/research-template.yaml`
+- 推奨（厚め）: `workflow/research-template.production.yaml`
+
 ### 教科書的網羅性（Comprehensive Coverage）
 
 - **MECE原則**: Mutually Exclusive, Collectively Exhaustive（漏れなくダブりなく）

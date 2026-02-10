@@ -20,7 +20,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from toc.env import load_env_files
 from toc.http import HttpError
-from toc.providers.elevenlabs import ElevenLabsClient, ElevenLabsConfig
+from toc.providers.elevenlabs import DEFAULT_ELEVENLABS_VOICE_ID, ElevenLabsClient, ElevenLabsConfig
 
 
 def _env(name: str, default: str | None = None) -> str | None:
@@ -62,7 +62,7 @@ def main() -> None:
 
     parser.add_argument("--api-key", default=_env("ELEVENLABS_API_KEY"))
     parser.add_argument("--api-base", default=_env("ELEVENLABS_API_BASE", "https://api.elevenlabs.io/v1"))
-    parser.add_argument("--voice-id", default=_env("ELEVENLABS_VOICE_ID"))
+    parser.add_argument("--voice-id", default=_env("ELEVENLABS_VOICE_ID", DEFAULT_ELEVENLABS_VOICE_ID))
     parser.add_argument("--model-id", default=_env("ELEVENLABS_MODEL_ID", "eleven_multilingual_v2"))
     parser.add_argument("--output-format", default=_env("ELEVENLABS_OUTPUT_FORMAT", "mp3_44100_128"))
 
@@ -80,7 +80,7 @@ def main() -> None:
     if not args.api_key:
         raise SystemExit("Missing ELEVENLABS_API_KEY or --api-key.")
     if not args.voice_id:
-        raise SystemExit("Missing ELEVENLABS_VOICE_ID or --voice-id.")
+        args.voice_id = DEFAULT_ELEVENLABS_VOICE_ID
 
     base = args.api_base.rstrip("/")
     url = f"{base}/text-to-speech/{urllib.parse.quote(args.voice_id)}"

@@ -4,7 +4,8 @@
 
 ## Providers
 - image: Google Nano Banana Pro（Gemini Image / `gemini-3-pro-image-preview`）
-- video: Google Veo 3.1（`veo-3.1-generate-preview`）
+- video: Google Veo 3.1（default。`video_generation.tool: google_veo_3_1`）
+- video (alt): Kling 3.0（`video_generation.tool: kling_3_0`）
 - TTS: ElevenLabs（voice/model/output_format は運用で確定）
 - LLM provider is LangChain (API-based)
 - 候補整理/調査リスト: `docs/video-production-research.md`

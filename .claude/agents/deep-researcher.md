@@ -20,6 +20,23 @@ model: inherit
 3. **構造化出力**: 結果は `output/research/` に YAML 形式の Markdown ファイルとして保存
 4. **Story-first**: 小ネタ/裏話の前に「そもそもどんな話か」を必ず明確化する（canonical synopsis + beat sheet）
 5. **Scene ID を保持**: 収集した情報を scene_id（最低20）へ配賦し、後段の story/script で使える形にする
+6. **情報量は厚めに**: この段階で増やし、後段で削る（最低基準を満たすまで薄くしない）
+
+## 出力量の目安（必須・後から削る前提）
+
+最低限の基準（未達なら「まだ調査不足」と判断して続行する）:
+
+- sources: **12件以上**
+- canonical synopsis: **5–10行**
+- beat sheet: **20個以上**
+- scene_plan: **scene_id 1..20 を埋める**
+- hooks: **10個以上**（各hookに scene_ids）
+- facts: **30個以上**（各factに sources + confidence）
+
+テンプレ運用:
+
+- 最小: `workflow/research-template.yaml`
+- 推奨（厚め）: `workflow/research-template.production.yaml`
 
 ## 実行手順
 
@@ -135,6 +152,7 @@ WebSearch と WebFetch を活用して情報を収集する。
 - 仮説が棄却された場合は、その理由と新たな仮説を記録する
 - 調査中に新たな重要論点が発見された場合は、イシューツリーを更新する
 - 十分な情報が収集できない場合は、ギャップを明示する
+- `TBD` の多用で薄い出力にしない（不明なら `unverified` として「何が不足で、次に何を探すか」を書く）
 
 ## 出力ファイル命名規則
 

@@ -24,13 +24,28 @@ scenes:
       # tool: "google_nanobanana_pro"
       # tool: "seadream"        # Seedream 4.5 (OpenAI Images compatible; see SEADREAM_* env)
       tool: "google_nanobanana_pro"
+      character_ids: ["character_id_here"]  # Use [] for B-roll scenes with no characters visible
       prompt: |
-        TODO: Describe what to show.
-        (Decision: real vs abstract is deferred; start with a neutral, explainable visual.)
+        [GLOBAL / INVARIANTS]
+        TODO: style/pov invariants. No text, no subtitles, no watermark.
+
+        [CHARACTERS]
+        TODO: who is present + must-match reference rules (if any).
+
+        [SCENE]
+        TODO: setting + key moment + composition (foreground/midground/background).
+
+        [CONTINUITY]
+        TODO: must match prev / set up next.
+
+        [AVOID]
+        TODO: forbid list (e.g., text/watermark/logo + unwanted styles).
       output: "assets/scenes/scene1_base.png"
       iterations: 4
       selected: null
     video_generation:
+      # tool: "google_veo_3_1"
+      # tool: "kling_3_0"
       tool: "google_veo_3_1"
       input_image: "assets/scenes/scene1_base.png"
       motion_prompt: "TODO: camera/motion"

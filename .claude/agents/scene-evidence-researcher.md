@@ -16,8 +16,10 @@ model: inherit
 ## 入力
 
 - `output/<topic>_<timestamp>/research.md`
-- `output/<topic>_<timestamp>/series_plan.md`（sceneごとのquestion）
+- `output/<topic>_<timestamp>/series_plan.md`（sceneごとのquestion。scene-series の場合）
+- `output/<topic>_<timestamp>/scene_outline*.md`（asset brief の場合。欠けている具体を埋める）
 - 対象scene id（作業指示で指定される想定）
+  - 例: 「scene 12 の setting を具体化するための根拠を集めて」
 
 ## 出力
 
@@ -37,9 +39,10 @@ model: inherit
 2) 足りない場合のみ **追加のWeb調査**
    - 「回答の根拠」になる一次/信頼性の高いソースを優先
    - 収集する情報はテキスト中心（素材リスクは基本考慮しない前提）
+3) 結果は「scene生成に使える粒度」で書く
+   - setting/camera/props/action へ落とし込める具体（数値/固有名/条件）を意識する
 
 ## 注意
 
 - 推測で断定しない。根拠が薄い場合は「不確実」と明記する
 - 参照した箇所が追跡できるように、sourcesにメモを残す
-

@@ -7,6 +7,8 @@ from typing import Any
 
 from toc.http import request_bytes
 
+DEFAULT_ELEVENLABS_VOICE_ID = "JOcmGzB8OFjY8MhjHHEf"  # Jun - Calm, Clear and Husky (ja)
+
 
 def _env(name: str, default: str | None = None) -> str | None:
     v = os.environ.get(name)
@@ -19,7 +21,7 @@ def _env(name: str, default: str | None = None) -> str | None:
 class ElevenLabsConfig:
     api_key: str
     api_base: str = "https://api.elevenlabs.io/v1"
-    voice_id: str = ""
+    voice_id: str = DEFAULT_ELEVENLABS_VOICE_ID
     model_id: str = "eleven_multilingual_v2"
     output_format: str = "mp3_44100_128"
 
@@ -35,9 +37,9 @@ class ElevenLabsConfig:
         key = api_key or _env("ELEVENLABS_API_KEY")
         if not key:
             raise ValueError("Missing ELEVENLABS_API_KEY")
-        v_id = voice_id or _env("ELEVENLABS_VOICE_ID", "")
+        v_id = (voice_id or _env("ELEVENLABS_VOICE_ID", "") or "").strip()
         if not v_id:
-            raise ValueError("Missing ELEVENLABS_VOICE_ID")
+            v_id = DEFAULT_ELEVENLABS_VOICE_ID
         return ElevenLabsConfig(
             api_key=key,
             api_base=api_base or _env("ELEVENLABS_API_BASE", "https://api.elevenlabs.io/v1") or "",
@@ -95,4 +97,3 @@ class ElevenLabsClient:
             json_payload=payload,
             timeout_seconds=timeout_seconds,
         )
-

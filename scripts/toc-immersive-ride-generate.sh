@@ -43,6 +43,13 @@ fi
 
 python scripts/generate-assets-from-manifest.py \
   --manifest "$manifest" \
+  --apply-asset-guides \
+  --asset-guides-character-refs scene \
+  --require-character-ids \
+  --require-object-ids \
+  --require-object-reference-scenes \
+  --character-reference-views front,side,back \
+  --character-reference-strip \
   --enable-last-frame \
   --chain-first-frame-from-prev-video \
   --chain-first-frame-seconds-from-end 0.042 \

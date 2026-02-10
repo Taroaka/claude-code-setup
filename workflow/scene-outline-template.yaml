@@ -1,0 +1,102 @@
+# Scene Outline / Asset Brief Template
+#
+# Purpose:
+# - This artifact is the bridge between story and generation prompts.
+# - For unknown topics (modern people/news), do NOT rely on model memory.
+#   Put enough grounded information here so image/video prompts can be derived.
+#
+# Notes:
+# - Keep keys ASCII.
+# - Facts must reference research `fact_id` / `source_id` when possible.
+# - Creative "set dressing" is allowed, but must be labeled as such.
+scene_outline_metadata:
+  topic: "<topic>"
+  source_research: "output/<topic>_<timestamp>/research.md"
+  source_story: "output/<topic>_<timestamp>/story.md"
+  created_at: "<ISO8601>"
+  method_used: "<scene method>"
+  version: 1
+  scene_count: 20
+
+scene_outline:
+  global_constraints:
+    pov: "tbd"                 # e.g. first-person POV / third-person
+    style: "tbd"               # e.g. photorealistic / cinematic / practical effects
+    must_include: ["string"]   # invariants across scenes (hands/bar/boat/etc)
+    must_avoid: ["string"]     # global negatives (anime/text/watermark/etc)
+    references:
+      # Optional, but recommended when you already have them.
+      # Image/video methods should include these as multi-image references.
+      character_images: ["assets/characters/character.png"]
+      style_images: ["assets/styles/style_ref.png"]
+      object_images: ["assets/scenes/object_ref.png"]
+      notes: "string"
+
+  scenes:
+    - scene_id: 1
+      phase: "opening|development|ordeal|transformation|ending"
+
+      # From story (human-facing)
+      narration: "string"
+      story_visual: "string"
+      research_refs: ["string"]
+
+      # Story responsibility
+      goal: "string"
+      conflict: "string"
+      stakes: "string"
+
+      # Grounding: what must be true / sourced
+      factual_anchors:
+        fact_ids: ["F1"]
+        source_ids: ["S1"]
+        notes: "string"
+
+      # Visual design (generator-facing)
+      setting:
+        location: "string"         # concrete place or set description
+        time_of_day: "string"
+        weather: "string"
+        environment: "string"
+      characters_present: ["string"]
+      props_set_pieces: ["string"]
+      action_beats: ["string"]     # 3-6 short actions in order
+
+      camera:
+        pov: "string"
+        shot: "string"             # wide/medium/close etc
+        movement: "string"         # dolly/pan/track etc
+        lens: "string"             # optional
+        framing: "string"          # optional composition notes
+
+      lighting_color:
+        lighting: "string"
+        palette: ["string"]
+        mood: "string"
+
+      continuity:
+        transition_in: "string"
+        transition_out: "string"
+        anchor_to_next: "string"   # match-cut anchor
+        must_match_prev: ["string"]
+        must_match_next: ["string"]
+
+      # Prompt guidance (to be converted to actual prompts later)
+      prompt_guidance:
+        image_focus: "string"
+        image_negative: "string"
+        video_motion: "string"
+        video_negative: "string"
+        creative_inventions: ["string"]  # explicitly label invented set dressing
+
+      # Optional: scene-level follow-up research (for unknown topics / missing specifics).
+      # If required fields are "tbd", create a task here and resolve it BEFORE generation.
+      research_tasks:
+        - task_id: "SR1"
+          question: "string"
+          why: "string"
+          query_suggestions: ["string"]
+          preferred_source_types: ["primary|academic|news|encyclopedia|other"]
+          outputs_expected: ["facts.items[] candidates", "setting details", "props_set_pieces additions"]
+          status: "todo|in_progress|done"
+          evidence_path: "output/<topic>_<timestamp>/scenes/scene01/evidence.md"

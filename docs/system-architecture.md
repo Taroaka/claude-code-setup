@@ -19,7 +19,7 @@ future cloud deployment. It corresponds to todo item 1 in `todo.txt`.
 | Storage | Filesystem object store + PostgreSQL metadata DB | Durable metadata |
 | Job queue | In-process async queue | Simple and sufficient for MVP |
 | State management | Append-only `state.txt` in project folder (no DB checkpoints) | Human-readable recovery |
-| Providers | LLM via LangChain; image=Google Nano Banana Pro; video=Google Veo 3.1; TTS=ElevenLabs | Avoid vendor lock-in |
+| Providers | LLM via LangChain; image=Google Nano Banana Pro; video=Veo 3.1 (default) or Kling 3.0; TTS=ElevenLabs | Avoid vendor lock-in |
 | API boundary | Claude Code entrypoint (slash command) | Keep surface area small |
 
 ## Component diagram
@@ -92,7 +92,8 @@ graph TD
 - Provider interfaces for image, video, TTS, and LLM.
 - LLM integration uses LangChain.
 - Image: Google Nano Banana Pro（Gemini Image / `gemini-3-pro-image-preview`）
-- Video: Google Veo 3.1（`veo-3.1-generate-preview`）
+- Video: Google Veo 3.1（default。`video_generation.tool: google_veo_3_1`）
+- Video (alt): Kling 3.0（`video_generation.tool: kling_3_0`）
 - TTS: ElevenLabs
 - Swap providers via configuration without changing orchestration logic.
 
