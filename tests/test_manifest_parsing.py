@@ -61,6 +61,50 @@ scenes:
         self.assertEqual(scenes[0].video_last_frame, "assets/scenes/scene2.png")
         self.assertIs(scenes[0].narration_normalize_to_scene_duration, False)
 
+    def test_parse_manifest_supports_cuts(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        mod = _load_generate_assets_module(repo_root)
+
+        md = """# Manifest
+
+```yaml
+scenes:
+  - scene_id: 10
+    timestamp: "00:00-00:24"
+    cuts:
+      - cut_id: 1
+        image_generation:
+          tool: "google_nanobanana_pro"
+          character_ids: []
+          object_ids: []
+          prompt: "p1"
+          output: "assets/scenes/scene10_1.png"
+          references: []
+        video_generation:
+          tool: "google_veo_3_1"
+          first_frame: "assets/scenes/scene10_1.png"
+          last_frame: "assets/scenes/scene10_2.png"
+          motion_prompt: "m1"
+          output: "assets/scenes/scene10_1_to_2.mp4"
+      - cut_id: 2
+        image_generation:
+          tool: "google_nanobanana_pro"
+          character_ids: []
+          object_ids: []
+          prompt: "p2"
+          output: "assets/scenes/scene10_2.png"
+          references: []
+```
+"""
+
+        yaml_text = mod.extract_yaml_block(md)
+        _, scenes = mod.parse_manifest_yaml(yaml_text)
+
+        self.assertEqual([s.scene_id for s in scenes], [1001, 1002])
+        self.assertEqual(scenes[0].timestamp, "00:00-00:24")
+        self.assertEqual(scenes[0].image_output, "assets/scenes/scene10_1.png")
+        self.assertEqual(scenes[0].video_output, "assets/scenes/scene10_1_to_2.mp4")
+
 
 if __name__ == "__main__":
     unittest.main()

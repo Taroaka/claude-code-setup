@@ -98,6 +98,15 @@ $ARGUMENTS:
 6) `--stage video` のときのみ、素材生成→結合を実行して `video.mp4` を完成させる
    - `scripts/toc-immersive-ride-generate.sh --run-dir output/<topic>_<timestamp>`
 7) `state.txt` に最終状態（`runtime.stage=done` と成果物パス）を追記する
+   - `runtime.render.status=started|success|failed`
+   - `artifact.video=output/<topic>_<timestamp>/video.mp4`
+   - `review.video.status=pending`（人間が最終判定で `approved` を付ける）
+
+人間の承認（例）:
+
+```bash
+python scripts/toc-state.py approve-video --run-dir output/<topic>_<timestamp> --note "OK"
+```
 
 ## 実装ヘルパ（ローカルスクリプト）
 

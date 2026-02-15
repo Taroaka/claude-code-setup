@@ -1,6 +1,6 @@
-# Immersive Cloud Island Walk Video Manifest Template (run root)
+# 没入型: 雲上の島を歩く体験（cloud_island_walk）マニフェストテンプレ（run root）
 
-This template is used for `output/<topic>_<timestamp>/video_manifest.md` in `/toc-immersive-ride` when using the `cloud_island_walk` experience.
+このテンプレは `/toc-immersive-ride --experience cloud_island_walk` の `output/<topic>_<timestamp>/video_manifest.md` 用。
 
 ```yaml
 video_metadata:
@@ -17,59 +17,56 @@ assets:
   character_bible: []
 
   style_guide:
-    visual_style: "photorealistic, cinematic, practical effects"
+    visual_style: "実写、シネマティック、プラクティカルエフェクト（実物セット感）"
     forbidden:
-      - "animated"
-      - "animation"
-      - "cartoon"
-      - "anime"
-      - "illustrated"
-      - "drawing"
-      - "third-person"
-      - "third-person view"
-      - "over-the-shoulder"
-      - "selfie"
-      - "camera facing the subject"
-      - "on-screen text"
-      - "subtitle text"
-      - "watermark"
-      - "logo"
+      - "アニメ調"
+      - "漫画調"
+      - "イラスト調"
+      - "絵"
+      - "三人称"
+      - "肩越し"
+      - "自撮り"
+      - "カメラが被写体を向く構図"
+      - "画面内テキスト"
+      - "字幕"
+      - "ウォーターマーク"
+      - "ロゴ"
     reference_images: []
 
-  # Object / setpiece bible (optional but recommended for film-quality detail).
-  # In cloud_island_walk, most philosophical concepts should be embodied as physical setpieces/artifacts.
+  # 舞台装置/主役級アイテム bible（任意だが強く推奨）
+  # cloud_island_walk では、抽象概念は “物理メタファー” の舞台装置/アイテムに落とし込む。
   object_bible: []
   # - object_id: "tbd_metaphor_gate"
   #   kind: "setpiece"
   #   reference_images:
   #     - "assets/objects/tbd_metaphor_gate.png"
   #   fixed_prompts:
-  #     - "Real-world materials + construction; no sci-fi HUD; no text signage"
-  #     - "Readable metaphor via shape/light/motion, not labels"
+  #     - "実写的な材質/構造（SFのHUDは禁止、文字看板は禁止）"
+  #     - "形/光/動きで比喩が読める（ラベルで説明しない）"
   #   cinematic:
-  #     role: "What role does this play in the film (threshold/temptation/revelation)?"
+  #     role: "映画での役割（境界/誘惑/啓示など）"
   #     visual_takeaways:
-  #       - "What should the audience understand purely from the visuals?"
+  #       - "映像から観客に与える情報（文字なしで理解できる形にする）"
   #     spectacle_details:
-  #       - "Non-plot visual wonders that make it exciting (moving parts, hidden rooms, shows)"
+  #       - "見せ場ディテール（可動構造、隠し部屋、ショー等。メイン筋と無関係でもOK）"
   #   notes: null
 
 scenes:
-  # Scene still images + transitions (guide is narration-only)
+  # scene静止画 + つなぎ動画（ガイドは音声のみ）
   #
-  # Zones (recommended planning):
+  # ゾーン設計（推奨）:
   # - Zones: 4–10 (minimum is 起承転結 = 4)
   # - Scenes per zone: 3–10
   #
-  # scene_id scheme (recommended):
+  # scene_id の付け方（推奨）:
   # - Zone 1: 110,120,130...
   # - Zone 2: 210,220,230...
   # - Zone 3: 310,320,330...
   # - Zone 4: 410,420,430...
   #
-  # Notes:
-  # - No on-screen text. Convey everything via imagery/metaphor.
-  # - Hands/anchor props are NOT required; keep POV stable via framing (path centered, horizon stable, consistent camera height).
+  # 注意:
+  # - 画面内テキストなし。すべて映像/比喩で伝える。
+  # - 手元アンカーは必須ではない。構図（道を中央、水平線安定、カメラ高さ一定）で一人称連続性を担保する。
   - scene_id: 10
     timestamp: "00:00-00:08"
     image_generation:
@@ -77,25 +74,25 @@ scenes:
       character_ids: []
       object_ids: []
       prompt: |
-        [GLOBAL / INVARIANTS]
-        First-person POV walking forward. Stable horizon, consistent camera height, natural gait.
-        Path / leading lines centered to enforce forward motion continuity.
-        Paradise island floating above a sea of clouds (practical set-piece feel; no sci-fi HUD).
-        Photorealistic, cinematic, practical effects. Natural film lighting.
-        No text, no subtitles, no watermark, no logo.
+        [全体 / 不変条件]
+        一人称POVで前進しながら歩く。水平線は安定、カメラ高さ一定、自然な歩行。
+        道/導線は常に中央（前進の連続性アンカー）。
+        雲海の上に浮かぶ楽園の島（実物セット感。SFのHUDは禁止）。
+        実写、シネマティック、実物セット感。自然な映画照明。
+        画面内テキストなし、字幕なし、ウォーターマークなし、ロゴなし。
 
-        [PROPS / SETPIECES]
+        [小道具 / 舞台装置]
 
-        [SCENE]
-        Arrival: you emerge from soft clouds onto a floating stone path that leads to a luminous island gate.
-        Key moment: the island’s first landmark hints at the core philosophical question of <topic> (show it as a physical metaphor, not text).
-        Composition: path centered; gate mid-ground; cloud ocean far background; foreground contains practical set textures (stone, moss, mist).
+        [シーン]
+        到着: 柔らかな雲を抜け、浮遊する石の道に出る。道の先に光る門が見える。
+        見せ場: 最初のランドマークが <topic> の核心を“物理メタファー”で示す（文字は禁止）。
+        構図: 道は中央、門は中景、雲海は遠景。前景は石/苔/霧など実物テクスチャ。
 
-        [CONTINUITY]
-        Set up next: the path continues inward; lighting warms slightly; keep the same forward direction and camera height.
+        [連続性]
+        次への仕込み: 道は奥へ続き、光は少し暖色へ。前進方向とカメラ高さは維持。
 
-        [AVOID]
-        animated, cartoon, anime, illustrated, drawing. Distorted hands, extra fingers. Any text.
+        [禁止]
+        アニメ/漫画/イラスト調。手の崩れ、指の増殖。あらゆる文字要素。
       output: "assets/scenes/scene10.png"
       aspect_ratio: "16:9"
       image_size: "2K"
@@ -107,11 +104,11 @@ scenes:
       duration_seconds: 8
       first_frame: "assets/scenes/scene10.png"
       last_frame: "assets/scenes/scene20.png"
-      motion_prompt: "Walk forward smoothly along the floating stone path; subtle cloud drift; maintain POV and hands with compass."
+      motion_prompt: "浮遊する石の道を滑らかに前進して歩く。雲はゆっくり流れる。POVと構図の安定を維持。"
       output: "assets/scenes/scene10_to_20.mp4"
     audio:
       narration:
-        text: "TODO: full narration text"
+        text: "TODO: ナレーション全文"
         tool: "elevenlabs"
         output: "assets/audio/narration.mp3"
         normalize_to_scene_duration: false
@@ -123,25 +120,24 @@ scenes:
       character_ids: []
       object_ids: []
       prompt: |
-        [GLOBAL / INVARIANTS]
-        First-person POV walking forward. Stable horizon, consistent camera height, natural gait.
-        Path / leading lines centered. Paradise island floating above clouds.
-        Photorealistic, cinematic, practical effects.
-        No text, no subtitles, no watermark, no logo.
+        [全体 / 不変条件]
+        一人称POVで前進しながら歩く。水平線は安定、カメラ高さ一定、自然な歩行。
+        道/導線は常に中央。雲海の上に浮かぶ楽園の島。実写、シネマティック、実物セット感。
+        画面内テキストなし、字幕なし、ウォーターマークなし、ロゴなし。
 
-        [PROPS / SETPIECES]
+        [小道具 / 舞台装置]
 
-        [SCENE]
-        Zone 1: the “foundation” area of the island (a garden / library / temple) that embodies the first key idea of <topic>.
-        Key moment: you approach a tangible metaphor object (e.g., mirrors, weights, bridges, knots) that makes the idea intuitive without words.
-        Composition: metaphor object mid-ground; deeper island path background; path remains centered.
+        [シーン]
+        ゾーン1: <topic> の最初の核心を体で理解する“基礎”エリア（庭園/図書館/神殿など）。
+        見せ場: 鏡、重り、橋、結び目などの“触れられる比喩オブジェクト”へ近づく（文字で説明しない）。
+        構図: 比喩オブジェクトは中景。さらに奥へ続く道を遠景に置き、導線は中央を維持。
 
-        [CONTINUITY]
-        Must match previous: same forward motion; same camera height; consistent lighting direction.
-        Set up next: a gentle curve in the path leads toward a more complex “paradox” zone.
+        [連続性]
+        前と一致: 前進方向、カメラ高さ、照明方向。
+        次への仕込み: 道が緩やかに曲がり、より複雑な“逆説”ゾーンへ導く。
 
-        [AVOID]
-        animated, cartoon, anime, illustrated, drawing. Distorted hands, extra fingers. Any text.
+        [禁止]
+        アニメ/漫画/イラスト調。手の崩れ、指の増殖。あらゆる文字要素。
       output: "assets/scenes/scene20.png"
       aspect_ratio: "16:9"
       image_size: "2K"
@@ -153,7 +149,7 @@ scenes:
       duration_seconds: 8
       first_frame: "assets/scenes/scene20.png"
       last_frame: "assets/scenes/scene30.png"
-      motion_prompt: "Continue walking forward; subtle parallax; keep hands/compass stable; clouds drift gently below."
+      motion_prompt: "前進を継続。微細な視差。構図とPOVの安定を維持。雲海がゆっくり流れる。"
       output: "assets/scenes/scene20_to_30.mp4"
 
   - scene_id: 30
@@ -163,25 +159,24 @@ scenes:
       character_ids: []
       object_ids: []
       prompt: |
-        [GLOBAL / INVARIANTS]
-        First-person POV walking forward. Stable horizon, consistent camera height, natural gait.
-        Path / leading lines centered. Paradise island floating above clouds.
-        Photorealistic, cinematic, practical effects.
-        No text, no subtitles, no watermark, no logo.
+        [全体 / 不変条件]
+        一人称POVで前進しながら歩く。水平線は安定、カメラ高さ一定、自然な歩行。
+        道/導線は常に中央。雲海の上に浮かぶ楽園の島。実写、シネマティック、実物セット感。
+        画面内テキストなし、字幕なし、ウォーターマークなし、ロゴなし。
 
-        [PROPS / SETPIECES]
+        [小道具 / 舞台装置]
 
-        [SCENE]
-        Zone 2: the “paradox / tension” area of the island, where two ideas collide as physical architecture (bridges crossing, stairs looping, water flowing upward).
-        Key moment: the metaphor becomes more visually complex, hinting at the deeper philosophical conflict in <topic>.
-        Composition: paradox structure mid-ground; a calm summit destination far background; path remains centered.
+        [シーン]
+        ゾーン2: “逆説/緊張”エリア。2つの考えが物理建築として衝突する（交差する橋、ループする階段、逆流する水など）。
+        見せ場: <topic> の深い対立が“構造の複雑さ”として感じられる（言葉で説明しない）。
+        構図: 逆説構造は中景。静かな頂上の目的地を遠景に置く。導線は中央を維持。
 
-        [CONTINUITY]
-        Must match previous: same POV and forward direction; consistent camera height.
-        Set up next: reveal a clear “synthesis” path toward the summit.
+        [連続性]
+        前と一致: POVと前進方向、カメラ高さ。
+        次への仕込み: “統合/解決”へ向かう明確な道筋が見えるようにする。
 
-        [AVOID]
-        animated, cartoon, anime, illustrated, drawing. Distorted hands, extra fingers. Any text.
+        [禁止]
+        アニメ/漫画/イラスト調。手の崩れ、指の増殖。あらゆる文字要素。
       output: "assets/scenes/scene30.png"
       aspect_ratio: "16:9"
       image_size: "2K"

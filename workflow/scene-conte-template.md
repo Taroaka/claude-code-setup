@@ -1,0 +1,91 @@
+# シーンコンテ（文字＋画像コンテのハイブリッド）テンプレ
+
+目的:
+- 1つのシーンを「1カット=1枚」ではなく、**3〜5カット**でストーリー性を持って見せる
+- 各カットの入力画像（`sceneX_Y.png`）を作り、その隣接カット同士で **8秒程度のI2V** を複数作って、合算して「1シーン」にする
+- 英雄の旅、感情ジェットコースターの設計を、カット割りで達成しやすくする
+
+重要制約:
+- 映像内に文字は存在しない（字幕/看板/刻印/ロゴ/透かし禁止）
+
+---
+
+## 0) メタ情報
+
+- topic: `<topic>`
+- run: `output/<topic>_<timestamp>/`
+- created_at: `<ISO8601>`
+- experience: `ride_action_boat|cloud_island_walk|...`
+
+## 1) シーン設計（映画での役割）
+
+- scene_id: `<int>`
+- scene_name: `<短い名前>`
+- role_in_film: `<このシーンは映画のどの役割? 例: threshold / temptation / ordeal / return>`
+- hero_journey_beat: `<英雄の旅のフェーズ>`
+- emotional_beat: `<観客の感情をどう動かす? 例: curiosity→awe→dread>`
+- conflict_or_question: `<このシーンが投げる問い / 緊張>`
+- payoff: `<次のシーンで回収する伏線 or 今ここで回収するもの>`
+
+## 2) 世界・連続性（文字なしで伝える）
+
+- location: `<場所>`
+- time_weather: `<時間帯/天候>`
+- continuity_from_prev: `<前カット/前シーンから必ず一致させるアンカー>`
+- continuity_to_next: `<次へ繋ぐアンカー（進行方向/照明/色/構図）>`
+- forbidden_visuals:
+  - `on-screen text`
+  - `subtitle text`
+  - `watermark`
+  - `logo`
+
+## 3) 登場人物・舞台装置（bible参照）
+
+- character_ids: `[...]`
+- object_ids: `[...]`
+- notes: `<このシーンで“見せたいディテール”を、bibleで固定する>`
+
+---
+
+## 4) カット割り（3〜5カット）
+
+このシーンの「時間の流れ」を、**カット列**として設計する。
+
+各カットは以下の情報を埋める（画像コンテの要点を優先）:
+
+### Cut `<scene_id>_1`
+
+- cut_purpose: `<このカットで観客に与える情報>`
+- shot_type: `<WS/MS/CU/POV/etc>`
+- composition: `<前景/中景/背景 + 画面アンカー + 視線誘導>`
+- camera: `<高さ/レンズ感/手ブレ/移動（前進/パン/ドリー）>`
+- action: `<何が起きる>`
+- key_prop_or_setpiece: `<このカットの主役アイテム/舞台装置>`
+- lighting_color: `<キーライト/色温度/陰影>`
+- vfx_practicality: `<practical effectsとして成立する表現>`
+- duration_hint_seconds: `<推定(例:8)>`
+- output_image: `assets/scenes/scene<scene_id>_1.png`
+- output_clip: `assets/scenes/scene<scene_id>_1_to_2.mp4`
+- avoid: `<手崩れ/余計な人物/文字/破綻>`
+
+### Cut `<scene_id>_2`
+
+(同様)
+
+### Cut `<scene_id>_3`
+
+(同様)
+
+### Optional Cut `<scene_id>_4` / `<scene_id>_5`
+
+(必要に応じて)
+
+---
+
+## 5) `video_manifest.md` への落とし込み（チェック）
+
+- `scenes[].cuts[]` として、各cutを `image_generation` に落とし込んだ
+- 各cutに `character_ids: []` と `object_ids: []` が明示されている
+- cut画像の `output` は `assets/scenes/scene<scene_id>_<cut>.png` に揃っている
+- 各I2V clip の `first_frame/last_frame/output` が隣接cut同士になっている
+

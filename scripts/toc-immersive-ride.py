@@ -19,6 +19,7 @@ EXPERIENCE_TEMPLATES: dict[str, Path] = {
     "ride_action_boat": Path("workflow/immersive-ride-video-manifest-template.md"),
     "cloud_island_walk": Path("workflow/immersive-cloud-island-walk-video-manifest-template.md"),
 }
+SCENE_CONTE_TEMPLATE = Path("workflow/scene-conte-template.md")
 
 
 def sanitize_topic(topic: str) -> str:
@@ -105,6 +106,14 @@ def main() -> None:
     write_text(run_dir / "research.md", "# Research Output\n\nTBD\n", force=args.force)
     write_text(run_dir / "story.md", "# Story Script Output\n\nTBD\n", force=args.force)
     write_text(run_dir / "script.md", "# Script Output (Immersive Ride POV)\n\nTBD\n", force=args.force)
+    if SCENE_CONTE_TEMPLATE.exists():
+        tmpl = SCENE_CONTE_TEMPLATE.read_text(encoding="utf-8")
+        tmpl = (
+            tmpl.replace("<topic>", topic_raw)
+            .replace("<timestamp>", ts)
+            .replace("<ISO8601>", now_iso())
+        )
+        write_text(run_dir / "scene_conte.md", tmpl, force=args.force)
 
     template_path = EXPERIENCE_TEMPLATES.get(str(args.experience))
     if template_path is None:

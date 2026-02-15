@@ -90,9 +90,9 @@ scenes:
         lines = story_scene.image_prompt.splitlines()
         idx_props = lines.index("[PROPS / SETPIECES]")
         self.assertIn("Ryugu Palace exterior: living coral + mother-of-pearl inlays, wet sheen, realistic scale", lines)
-        self.assertIn("Cinematic role: Threshold + temptation", lines)
-        self.assertIn("Conveys visually: This place is alive", lines)
-        self.assertIn("Spectacle detail: Distant fish-school light show in the atrium", lines)
+        self.assertIn("映画での役割: Threshold + temptation", lines)
+        self.assertIn("映像から伝える情報: This place is alive", lines)
+        self.assertIn("見せ場ディテール: Distant fish-school light show in the atrium", lines)
         self.assertEqual(lines[idx_props + 1], "Ryugu Palace exterior: living coral + mother-of-pearl inlays, wet sheen, realistic scale")
 
     def test_require_object_ids_fails_when_missing(self) -> None:
@@ -174,4 +174,3 @@ scenes:
 
 if __name__ == "__main__":
     unittest.main()
-

@@ -25,8 +25,8 @@ assets:
         - "assets/characters/protagonist_side.png"
         - "assets/characters/protagonist_back.png"
       fixed_prompts:
-        - "short black hair"
-        - "traditional japanese attire"
+        - "黒髪の短髪"
+        - "和装（実写的な生地感）"
 
   style_guide:
     visual_style: "cinematic, warm tones"
@@ -42,14 +42,14 @@ scenes:
       # tool: "seadream"        # Seedream 4.5 (OpenAI Images compatible; see SEADREAM_* env)
       tool: "google_nanobanana_pro"
       prompt: |
-        [GLOBAL / INVARIANTS]
-        Cinematic, warm tones. Natural lighting. No text, no subtitles, no watermark.
+        [全体 / 不変条件]
+        シネマティック。暖色寄り。自然な照明。画面内テキストなし、字幕なし、ウォーターマークなし。
 
-        [SCENE]
-        Quiet rural village at dawn. Soft morning fog. Wide establishing shot.
+        [シーン]
+        夜明けの静かな田舎の村。柔らかな朝霧。広い導入ショット。
 
-        [AVOID]
-        text, watermark, logo.
+        [禁止]
+        文字、ウォーターマーク、ロゴ。
       output: "assets/scenes/scene1_base.png"
       iterations: 4
       selected: 1
@@ -58,7 +58,7 @@ scenes:
       # tool: "kling_3_0"
       tool: "google_veo_3_1"
       input_image: "assets/scenes/scene1_base.png"
-      motion_prompt: "slow pan"
+      motion_prompt: "ゆっくりパン（落ち着いた速度、微細な視差）"
       output: "assets/scenes/scene1_video.mp4"
     audio:
       narration:

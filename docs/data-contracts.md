@@ -95,5 +95,11 @@ output/<topic>_<timestamp>/
 ### 4.2 `scenes[].image_generation`
 
 - `prompt` は構造化テンプレで書く（正本: `docs/implementation/image-prompting.md`）
+- 言語: 原則 **日本語**（見出しタグは固定推奨、`AVOID` は英語キーワード併記可）
 - `character_ids: []` は常に明示（B-roll は `[]`）
 - `object_ids: []` は常に明示（setpiece/アイテムが無い scene でも `[]`）
+
+### 4.3 `scenes[].cuts[]`（optional, recommended）
+
+シーンを「複数カット（3〜5枚）」で表現したい場合、`scenes[]` の各要素に `cuts[]` を持たせる。
+生成スクリプトは `cuts[]` を展開して画像/動画を生成する（cutごとに `image_generation` / `video_generation` を持つ）。

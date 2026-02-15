@@ -41,6 +41,24 @@ if [[ ! -f "$manifest" ]]; then
   exit 1
 fi
 
+python scripts/toc-state.py ensure --run-dir "$run_dir" --manifest "$manifest"
+
+stage="assets"
+on_err() {
+  code=$?
+  set +e
+  python scripts/toc-state.py append --run-dir "$run_dir" \
+    --set "runtime.stage=${stage}" \
+    --set "runtime.render.status=failed" \
+    --set "last_error=toc-immersive-ride-generate.sh failed (stage=${stage}, exit=${code})"
+  exit "$code"
+}
+trap on_err ERR
+
+python scripts/toc-state.py append --run-dir "$run_dir" \
+  --set "runtime.stage=${stage}" \
+  --set "runtime.render.status=started"
+
 python scripts/generate-assets-from-manifest.py \
   --manifest "$manifest" \
   --apply-asset-guides \
@@ -58,6 +76,8 @@ python scripts/generate-assets-from-manifest.py \
 python scripts/build-clip-lists.py --manifest "$manifest" --out-dir "$run_dir"
 
 audio="${run_dir%/}/assets/audio/narration.mp3"
+stage="render"
+python scripts/toc-state.py append --run-dir "$run_dir" --set "runtime.stage=${stage}"
 if [[ -f "$audio" ]]; then
   scripts/render-video.sh \
     --clip-list "${run_dir%/}/video_clips.txt" \
@@ -71,6 +91,13 @@ else
     --fps 24 --size 1280x720 \
     --out "${run_dir%/}/video.mp4"
 fi
+
+stage="done"
+python scripts/toc-state.py append --run-dir "$run_dir" \
+  --set "runtime.stage=${stage}" \
+  --set "runtime.render.status=success" \
+  --set "artifact.video=${run_dir%/}/video.mp4" \
+  --set "review.video.status=pending"
 
 echo "Done:"
 echo "  - ${run_dir%/}/video.mp4"

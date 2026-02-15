@@ -467,6 +467,92 @@ def _parse_manifest_yaml_pyyaml(yaml_text: str) -> tuple[dict, AssetGuides, list
 
         timestamp = _as_opt_str(raw_scene.get("timestamp"))
 
+        raw_cuts = raw_scene.get("cuts")
+        if isinstance(raw_cuts, list) and raw_cuts:
+            for idx, raw_cut in enumerate(raw_cuts, start=1):
+                if not isinstance(raw_cut, dict):
+                    continue
+
+                cut_id_raw = raw_cut.get("cut_id")
+                try:
+                    cut_id = int(cut_id_raw) if cut_id_raw is not None else int(idx)
+                except Exception:
+                    cut_id = int(idx)
+
+                cut_scene_id = int(scene_id) * 100 + int(cut_id)
+
+                ig = raw_cut.get("image_generation") if isinstance(raw_cut.get("image_generation"), dict) else {}
+                vg = raw_cut.get("video_generation") if isinstance(raw_cut.get("video_generation"), dict) else {}
+
+                image_tool = _as_opt_str(ig.get("tool")) if isinstance(ig, dict) else None
+                image_prompt = _as_opt_str(ig.get("prompt")) if isinstance(ig, dict) else None
+                image_output = _as_opt_str(ig.get("output")) if isinstance(ig, dict) else None
+                image_references = _ensure_str_list(ig.get("references")) if isinstance(ig, dict) else []
+                image_character_ids_present = isinstance(ig, dict) and ("character_ids" in ig)
+                image_character_ids = _ensure_str_list(ig.get("character_ids")) if isinstance(ig, dict) else []
+                image_object_ids_present = isinstance(ig, dict) and ("object_ids" in ig)
+                image_object_ids = _ensure_str_list(ig.get("object_ids")) if isinstance(ig, dict) else []
+                image_aspect_ratio = _as_opt_str(ig.get("aspect_ratio")) if isinstance(ig, dict) else None
+                image_size = _as_opt_str(ig.get("image_size")) if isinstance(ig, dict) else None
+
+                video_tool = _as_opt_str(vg.get("tool")) if isinstance(vg, dict) else None
+                video_input_image = _as_opt_str(vg.get("input_image")) if isinstance(vg, dict) else None
+                video_first_frame = _as_opt_str(vg.get("first_frame")) if isinstance(vg, dict) else None
+                video_last_frame = _as_opt_str(vg.get("last_frame")) if isinstance(vg, dict) else None
+                video_motion_prompt = _as_opt_str(vg.get("motion_prompt")) if isinstance(vg, dict) else None
+                video_output = _as_opt_str(vg.get("output")) if isinstance(vg, dict) else None
+
+                narration_tool = None
+                narration_text = None
+                narration_output = None
+                narration_normalize = True
+
+                audio = raw_cut.get("audio")
+                narration = None
+                if isinstance(audio, dict):
+                    narration = audio.get("narration")
+                if narration is None:
+                    narration = raw_cut.get("narration")
+                if isinstance(narration, dict):
+                    narration_tool = _as_opt_str(narration.get("tool"))
+                    narration_text = _as_opt_str(narration.get("text"))
+                    narration_output = _as_opt_str(narration.get("output"))
+                    normalize_raw = narration.get("normalize_to_scene_duration")
+                    if isinstance(normalize_raw, bool):
+                        narration_normalize = bool(normalize_raw)
+                    else:
+                        normalize_s = _as_opt_str(normalize_raw)
+                        if normalize_s and normalize_s.strip().lower() in {"false", "no", "0"}:
+                            narration_normalize = False
+
+                scenes.append(
+                    SceneSpec(
+                        scene_id=cut_scene_id,
+                        timestamp=timestamp,
+                        image_tool=image_tool,
+                        image_prompt=image_prompt,
+                        image_output=image_output,
+                        image_references=image_references,
+                        image_character_ids=image_character_ids,
+                        image_character_ids_present=image_character_ids_present,
+                        image_object_ids=image_object_ids,
+                        image_object_ids_present=image_object_ids_present,
+                        image_aspect_ratio=image_aspect_ratio,
+                        image_size=image_size,
+                        video_tool=video_tool,
+                        video_input_image=video_input_image,
+                        video_first_frame=video_first_frame,
+                        video_last_frame=video_last_frame,
+                        video_motion_prompt=video_motion_prompt,
+                        video_output=video_output,
+                        narration_tool=narration_tool,
+                        narration_text=narration_text,
+                        narration_output=narration_output,
+                        narration_normalize_to_scene_duration=narration_normalize,
+                    )
+                )
+            continue
+
         ig = raw_scene.get("image_generation") if isinstance(raw_scene.get("image_generation"), dict) else {}
         vg = raw_scene.get("video_generation") if isinstance(raw_scene.get("video_generation"), dict) else {}
 
@@ -591,10 +677,31 @@ def _merge_refs(existing: list[str], extra: list[str], *, exclude: str | None = 
     return out
 
 
+_HEADING_ALIASES: dict[str, list[str]] = {
+    # Keep canonical English keys for code, but accept Japanese headings in prompts/templates.
+    "GLOBAL / INVARIANTS": ["GLOBAL / INVARIANTS", "全体 / 不変条件", "全体/不変条件", "グローバル / 不変条件"],
+    "CHARACTERS": ["CHARACTERS", "登場人物", "キャラクター"],
+    "PROPS / SETPIECES": ["PROPS / SETPIECES", "小道具 / 舞台装置", "小道具/舞台装置", "プロップ / 舞台装置"],
+    "SCENE": ["SCENE", "シーン", "場面"],
+    "CONTINUITY": ["CONTINUITY", "連続性", "つながり"],
+    "AVOID": ["AVOID", "禁止", "避けること", "NG"],
+}
+
+_HEADING_JA_LABEL: dict[str, str] = {
+    "GLOBAL / INVARIANTS": "全体 / 不変条件",
+    "CHARACTERS": "登場人物",
+    "PROPS / SETPIECES": "小道具 / 舞台装置",
+    "SCENE": "シーン",
+    "CONTINUITY": "連続性",
+    "AVOID": "禁止",
+}
+
+
 def _find_heading_line_index(lines: list[str], heading: str) -> int | None:
-    target = f"[{heading}]"
+    candidates = _HEADING_ALIASES.get(heading, [heading])
+    targets = {f"[{h}]" for h in candidates}
     for i, line in enumerate(lines):
-        if line.strip() == target:
+        if line.strip() in targets:
             return i
     return None
 
@@ -611,7 +718,8 @@ def _inject_lines_under_heading(prompt: str, heading: str, lines_to_add: list[st
     idx = _find_heading_line_index(lines, heading)
     if idx is None:
         # No structured heading: append a new section at the end.
-        suffix = "\n".join([f"[{heading}]", *to_add])
+        label = _HEADING_JA_LABEL.get(heading, heading)
+        suffix = "\n".join([f"[{label}]", *to_add])
         if prompt.strip() == "":
             return suffix
         return (prompt.rstrip() + "\n\n" + suffix).rstrip()
@@ -729,11 +837,11 @@ def apply_asset_guides_to_scene(*, scene: SceneSpec, guides: AssetGuides, charac
         if entry.fixed_prompts:
             prop_lines.extend(entry.fixed_prompts)
         if entry.cinematic_role:
-            prop_lines.append(f"Cinematic role: {entry.cinematic_role}")
+            prop_lines.append(f"映画での役割: {entry.cinematic_role}")
         for v in entry.cinematic_visual_takeaways or []:
-            prop_lines.append(f"Conveys visually: {v}")
+            prop_lines.append(f"映像から伝える情報: {v}")
         for s in entry.cinematic_spectacle_details or []:
-            prop_lines.append(f"Spectacle detail: {s}")
+            prop_lines.append(f"見せ場ディテール: {s}")
 
     if global_lines:
         prompt = _inject_lines_under_heading(prompt, "GLOBAL / INVARIANTS", global_lines)
@@ -930,21 +1038,21 @@ def _character_view_prompt(base_prompt: str, view: str) -> str:
 
     if view_norm == "front":
         view_lines = [
-            "Character reference: FRONT view.",
-            "Full-body head-to-toe, feet fully visible (no cropping).",
-            "Neutral relaxed pose, arms at sides; centered framing; clean neutral background.",
+            "キャラクター参照画像: 正面（FRONT）ビュー。",
+            "全身（頭からつま先まで）を入れる。足先が切れない（クロップしない）。",
+            "ニュートラルな姿勢。腕は自然に下ろす。中央構図。背景はクリーンで無地。",
         ]
     elif view_norm == "side":
         view_lines = [
-            "Character reference: LEFT SIDE profile view.",
-            "Full-body head-to-toe, feet fully visible (no cropping).",
-            "Neutral relaxed pose; centered framing; clean neutral background.",
+            "キャラクター参照画像: 左側面（LEFT SIDE）ビュー。",
+            "全身（頭からつま先まで）を入れる。足先が切れない（クロップしない）。",
+            "ニュートラルな姿勢。中央構図。背景はクリーンで無地。",
         ]
     else:  # back
         view_lines = [
-            "Character reference: BACK view.",
-            "Full-body head-to-toe, feet fully visible (no cropping).",
-            "Neutral relaxed pose; centered framing; clean neutral background.",
+            "キャラクター参照画像: 背面（BACK）ビュー。",
+            "全身（頭からつま先まで）を入れる。足先が切れない（クロップしない）。",
+            "ニュートラルな姿勢。中央構図。背景はクリーンで無地。",
         ]
 
     # Prefer structured injection under [SCENE]; fall back to appending.
@@ -2244,7 +2352,7 @@ def main() -> None:
         if scene.video_motion_prompt:
             prompt_parts.append(scene.video_motion_prompt.strip())
         if scene.image_prompt:
-            prompt_parts.append("Scene description:\n" + scene.image_prompt.strip())
+            prompt_parts.append("シーン説明:\n" + scene.image_prompt.strip())
         prompt = "\n\n".join(prompt_parts).strip()
         vprefix = (args.video_prompt_prefix or "").strip()
         vsuffix = (args.video_prompt_suffix or "").strip()

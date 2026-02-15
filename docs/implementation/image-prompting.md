@@ -17,14 +17,21 @@
 
 **prompt は 1本の自由文にせず、毎回同じ見出し順で書く。**
 
+## 言語ポリシー（重要）
+
+- `video_manifest.md` は **日本語で書く**（修正指示・レビューを日本語で完結させるため）。
+- 見出しは **日本語**を推奨（例: `[全体 / 不変条件]`, `[登場人物]`, `[小道具 / 舞台装置]`, `[シーン]`, `[連続性]`, `[禁止]`）。
+  - 生成スクリプト側は英語見出しも互換で認識するが、運用は日本語に寄せる。
+- 禁止語彙（`禁止` / `assets.style_guide.forbidden`）も日本語で書く方向で統一する（例: `画面内テキスト`, `字幕`, `ウォーターマーク`, `ロゴ`）。
+
 推奨ブロック（順序固定）:
 
-1) `GLOBAL / INVARIANTS`（全scene共通の不変条件）
-2) `CHARACTERS`（人物・参照一致）
-3) `PROPS / SETPIECES`（重要アイテム/舞台装置の不変条件）
-4) `SCENE`（場面固有の描写）
-5) `CONTINUITY`（前後接続）
-6) `AVOID`（禁止/地雷）
+1) `全体 / 不変条件`（全scene共通の不変条件）
+2) `登場人物`（人物・参照一致）
+3) `小道具 / 舞台装置`（重要アイテム/舞台装置の不変条件）
+4) `シーン`（場面固有の描写）
+5) `連続性`（前後接続）
+6) `禁止`（禁止/地雷）
 
 この repo の生成は、最終的に `scenes[].image_generation.prompt` のテキストをそのまま API に渡すため、
 **「どこに何を書くか」自体をテンプレ化**すると品質が安定する。
@@ -56,19 +63,24 @@
 - “track centered with central rail visible”
 - “story character in the mid-ground”
 
+（日本語で書くなら例）
+- 「画面下の前景に手と安全バー」
+- 「中央にレールが見える軌道を中央構図」
+- 「登場人物は中景」
+
 ### 1.4 ネガティブは「禁止カテゴリ + 事故りやすい欠陥」を短く
 
 入れすぎると逆に不安定になるので、まずは以下を定番化:
-- 文字系: `No text, no subtitles, no watermark, no logo`
-- スタイル: `No anime/cartoon/illustration`
-- 手/人体: `no deformed hands, no extra fingers`
+- 文字系: `画面内テキストなし、字幕なし、ウォーターマークなし、ロゴなし`
+- スタイル: `アニメ/漫画/イラスト調を避ける`
+- 手/人体: `手の崩れを避ける、指の増殖を避ける`
 
 ### 1.5 “シネマ/写真”語彙は「必要なものだけ」使う（チートシート）
 
 モデルやプロバイダに依存しにくい（＝cross-modelで通りやすい）語彙だけに絞る。
 
 - Shot / framing:
-  - `wide establishing shot`, `medium shot`, `close-up`, `POV shot`, `centered composition`
+  - `導入の広いショット`, `中距離`, `クローズアップ`, `一人称POV`, `中央構図`
   - `foreground / mid-ground / background` を必ず書く（位置指定が強い）
 - Lens / DOF:
   - `35mm lens`, `50mm lens`, `shallow depth of field`, `soft bokeh`
@@ -95,28 +107,28 @@ aspect ratio / size は `image_generation.aspect_ratio` / `image_generation.imag
 `image_generation.prompt: |` の中身:
 
 ```text
-[GLOBAL / INVARIANTS]
-Style: photorealistic, cinematic, practical effects. Natural film lighting.
-No text, no subtitles, no watermark, no logo.
+[全体 / 不変条件]
+実写、シネマティック、実物セット感。自然な映画照明。
+画面内テキストなし、字幕なし、ウォーターマークなし、ロゴなし。
 
-[CHARACTERS]
+[登場人物]
 <character constraints that must stay consistent across scenes>
 
-[PROPS / SETPIECES]
+[小道具 / 舞台装置]
 <object/setpiece constraints that must stay consistent across scenes>
 
-[SCENE]
-Setting: <where/when/weather>. Key moment: <one sentence>.
-Composition: <foreground/midground/background + main subject placement>.
-Camera: <POV/shot/lens/DOF if helpful>.
+[シーン]
+舞台: <どこ/いつ/天候>。見せ場: <1文で>.
+構図: <前景/中景/遠景 + 主役の配置>.
+カメラ: <POV/画角/動き（必要ならレンズ感）>.
 
-[CONTINUITY]
-Must match previous: <lighting direction / object positions / track curve>.
-Set up next: <anchor object / color cue / direction>.
+[連続性]
+前と一致: <光/位置/進行方向>.
+次への仕込み: <アンカー/色/方向>.
 
-[AVOID]
-anime, cartoon, illustration, drawing.
-deformed hands, extra fingers, unreadable objects, broken perspective.
+[禁止]
+アニメ/漫画/イラスト調。
+手の崩れ、指の増殖、読めない物体、パース破綻。
 ```
 
 メモ:
@@ -127,34 +139,34 @@ deformed hands, extra fingers, unreadable objects, broken perspective.
 
 ## 3) /toc-immersive-ride 用の必須 invariants（推奨セット）
 
-`GLOBAL / INVARIANTS` に毎回入れる（または将来的に assets から自動注入する）:
+`全体 / 不変条件` に毎回入れる（または将来的に assets から自動注入する）:
 
-- `First-person POV from ride action boat`
-- `Realistic hands gripping ornate brass safety bar`
-- `theme park ride track with central rail visible`
-- `photorealistic, cinematic, practical effects`
-- `No text, no subtitles, no watermark`
+- `一人称POVのライド（アクションボート）`
+- `画面下の前景に手があり、安全バーを握っている`
+- `中央にレールが見える軌道が中央構図`
+- `実写、シネマティック、実物セット感`
+- `画面内テキストなし、字幕なし、ウォーターマークなし`
 
 さらに “事故りやすい” ので早めに禁止しておく:
-- `anime/cartoon/illustration/drawing`
-- `deformed hands / extra fingers`
+- `アニメ/漫画/イラスト調`
+- `手の崩れ / 指の増殖`
 
 ## 3.2 /toc-immersive-ride（cloud_island_walk）向け invariants（推奨セット）
 
 `cloud_island_walk` は「雲上の島を歩いて理解を深める」体験テンプレ。
-`GLOBAL / INVARIANTS` の定番（scene間の一貫性のため）:
+`全体 / 不変条件` の定番（scene間の一貫性のため）:
 
-- `First-person POV walking forward`
-- `paradise island floating above a sea of clouds`（概念を実写の比喩として表現）
-- `stable horizon, consistent camera height, centered path/leading lines`（連続性アンカー）
-- `photorealistic, cinematic, practical effects`
-- `No text, no subtitles, no watermark`
+- `一人称POVで前進しながら歩く`
+- `雲海の上に浮かぶ楽園の島`（概念を実写の比喩として表現）
+- `水平線安定、カメラ高さ一定、道/導線を中央`（連続性アンカー）
+- `実写、シネマティック、実物セット感`
+- `画面内テキストなし、字幕なし、ウォーターマークなし`
 
 特に地雷なので早めに禁止しておく:
-- `anime/cartoon/illustration/drawing`
-- `deformed hands / extra fingers`
-- `on-screen text / subtitle text / watermark / logo`
-- `third-person / over-the-shoulder / selfie`
+- `アニメ/漫画/イラスト調`
+- `手の崩れ / 指の増殖`
+- `画面内テキスト / 字幕 / ウォーターマーク / ロゴ`
+- `三人称 / 肩越し / 自撮り`
 
 ## 3.1 character_bible を scene で選ぶ（混ざり防止）
 
@@ -163,6 +175,16 @@ deformed hands, extra fingers, unreadable objects, broken perspective.
 `--apply-asset-guides --asset-guides-character-refs scene` で参照画像/固定フレーズを注入する運用を推奨する。
 
 B-roll（キャラを映さない）sceneは `character_ids: []` を明示し、キャラ注入ゼロにする。
+
+### Human character baseline（推奨）
+
+人間キャラは、物語上の特段の理由がない限り「美男美女（映画俳優レベル）」を初期値にする。
+`assets.character_bible[].fixed_prompts` に短文で入れて固定する（例）:
+
+- `人間キャラは美男美女（映画俳優レベル）。顔立ちのバランス、肌の質感、表情、目の印象が自然で実写的`
+
+注意:
+- “魅力”は過度な誇張より、実写で成立する自然さ（骨格/肌/表情/所作）を優先する
 
 ## 3.3 object_bible を scene で参照する（舞台装置の映画品質）
 
@@ -173,7 +195,8 @@ B-roll（キャラを映さない）sceneは `character_ids: []` を明示し、
 - 運用:
   - `assets.object_bible[].reference_images` を先に生成（`assets/objects/...png` を `image_generation.output` にする reference scene）
   - story scene は `object_ids: ["..."]` を宣言
-  - 生成は `--apply-asset-guides` で、object の固定フレーズを `[PROPS / SETPIECES]` に自動注入する
+- 生成は `--apply-asset-guides` で、object の固定フレーズを `小道具 / 舞台装置` に自動注入する
+  - 見出しは日本語推奨（`[小道具 / 舞台装置]`）。スクリプト側は英語見出しも互換で認識する。
 
 ポイント:
 - 画面内の文字で説明しない（看板/刻印/銘板などは禁止）。**形/光/動き/ショー性**で理解させる。

@@ -69,17 +69,25 @@ scripts/ai/multiagent.sh --engine codex
 python scripts/ai/toc-scene-series-multiagent.py "topic"
 ```
 
-## Codex: improve-workflow skill
+## Codex: skills
 
-- スキルソース: `codex_skills/improve-workflow/`
+Codex のスキル正本は `codex_skills/` に置き、下記で `~/.codex/skills/` へ同期する。
+
 - インストール:
 
 ```bash
 scripts/ai/install-codex-skills.sh
 ```
 
-インストール先（グローバル）:
-- `~/.codex/skills/improve-workflow/`
+主なスキル:
+
+- `improve-workflow`: plan→implement→verify の堅い開発ループ
+- `folktale-researcher`: 国/地域別の民話・神話ネタ出し→ToC調査テンプレへの落とし込み
+- `neta-collector`: ネタ収集の入口（各国物語/自己啓発人物/AI発案/時代解説の振り分け）
+- `selfhelp-trend-researcher`: 話題の自己啓発系人物の候補出し→紹介骨格（Hybridで未検証も明示）
+- `ai-idea-studio`: AI発案のオリジナル案を量産→1案深掘り（制作可能な骨格）
+- `era-explainer`: 時代解説（例: 縄文）を cloud_island_walk 等の体験フォーマットへ落とし込み
+- `vertical-shorts-creator`: 承認済みの横動画から縦ショート（9:16, ~60秒）を作る（scene選定→コマンド提示）
 
 ## Claude Code: rules（任意・グローバル）
 

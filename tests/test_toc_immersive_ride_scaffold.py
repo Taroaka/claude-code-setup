@@ -70,8 +70,8 @@ class TestTocImmersiveRideScaffold(unittest.TestCase):
             self.assertTrue(manifest_path.exists())
             manifest = manifest_path.read_text(encoding="utf-8")
             self.assertIn('experience: "cloud_island_walk"', manifest)
-            self.assertIn("First-person POV walking forward", manifest)
-            self.assertIn("on-screen text", manifest)
+            self.assertIn("一人称POVで前進しながら歩く", manifest)
+            self.assertIn("画面内テキスト", manifest)
 
 
 if __name__ == "__main__":

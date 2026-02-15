@@ -1,6 +1,6 @@
-# Immersive Ride Video Manifest Template (run root)
+# 没入型ライド: 動画マニフェストテンプレ（run root）
 
-This template is used for `output/<topic>_<timestamp>/video_manifest.md` in `/toc-immersive-ride`.
+このテンプレは `/toc-immersive-ride` の `output/<topic>_<timestamp>/video_manifest.md` 用。
 
 ```yaml
 video_metadata:
@@ -15,65 +15,67 @@ video_metadata:
 
 assets:
   character_bible:
-    # Story characters (examples). The guide is narration-only (no visual guide character).
+    # 登場人物（例）。ガイドは音声（ナレーション）のみで、画面内には出さない。
     - character_id: "protagonist"
       reference_images:
         - "assets/characters/protagonist_front.png"
       fixed_prompts:
-        - "protagonist matches the reference image exactly (same face, hair, outfit)"
-      notes: "Generate a clean full-body turnaround reference first, then reuse as reference in scenes where this character appears."
+        - "主人公は参照画像と完全一致（顔、髪型、服装が同一）"
+        - "人間の主人公は美男美女（映画俳優レベルの魅力）。顔立ちのバランス、肌の質感、表情、目の印象が自然で実写的"
+      notes: "全身ターンアラウンドの参照画像を先に生成し、主人公が映るsceneでは必ず参照する。"
 
   style_guide:
-    visual_style: "photorealistic, cinematic, practical effects"
+    visual_style: "実写、シネマティック、プラクティカルエフェクト（特撮/実物セット感）"
     forbidden:
-      - "animated"
-      - "animation"
-      - "cartoon"
-      - "anime"
-      - "illustrated"
-      - "drawing"
+      - "アニメ調"
+      - "漫画調"
+      - "イラスト調"
+      - "絵"
+      - "画面内テキスト"
+      - "字幕"
+      - "ウォーターマーク"
+      - "ロゴ"
     reference_images: []
 
-  # Object / setpiece bible (optional but recommended for film-quality detail).
-  # Treat key items/places like "characters": design them once, generate reference images, then reference them in scenes.
+  # 舞台装置/主役級アイテム bible（任意だが強く推奨）
+  # 重要要素は “キャラ同様に” 設計→参照画像→scene参照の順で固める。
   object_bible: []
   # - object_id: "tbd_setpiece"
   #   kind: "setpiece"  # setpiece|artifact|phenomenon
   #   reference_images:
   #     - "assets/objects/tbd_setpiece.png"
   #   fixed_prompts:
-  #     - "Material + construction details that must stay consistent"
-  #     - "Mechanism / showmanship / temptation design cues"
-  #     - "No engraved text, no signage; convey meaning via form/light/motion"
+  #     - "材質/構造の不変条件（実写で成立する重量感/工芸/経年）"
+  #     - "機構/ルール/誘惑/ショー性（物語に無関係でも映像として魅力的に）"
+  #     - "文字で説明しない（看板/刻印/銘板なし）。形/光/動きで伝える"
   #   cinematic:
-  #     role: "What role does this play in the film (plot/emotion/theme)?"
+  #     role: "映画での役割（物語/感情/テーマ）"
   #     visual_takeaways:
-  #       - "What should the audience understand purely from the visuals?"
+  #       - "映像から観客に与える情報（文字なしで理解できる形にする）"
   #     spectacle_details:
-  #       - "Non-plot visual wonders that make it exciting (shows, hidden rooms, moving parts)"
+  #       - "見せ場ディテール（隠し部屋、可動構造、ショー等。メイン筋と無関係でもOK）"
   #   notes: null
 
 scenes:
-  # 0) Character reference (recommended)
-  # When you run `scripts/toc-immersive-ride-generate.sh`, it will auto-generate side/back views and a combined strip
-  # from this front output (so you don't have to hand-author 3 prompts).
+  # 0) キャラクター参照（推奨）
+  # `scripts/toc-immersive-ride-generate.sh` で、正面出力から側面/背面と結合stripを自動生成する。
   - scene_id: 0
     image_generation:
       tool: "google_nanobanana_pro"
       character_ids: ["protagonist"]
       object_ids: []
       prompt: |
-        [GLOBAL / INVARIANTS]
-        Photorealistic, cinematic, practical effects. Natural film lighting.
-        No text, no subtitles, no watermark, no logo.
+        [全体 / 不変条件]
+        実写、シネマティック、プラクティカルエフェクト（実物セット感）。自然な映画照明。
+        画面内テキストなし、字幕なし、ウォーターマークなし、ロゴなし。
 
-        [SCENE]
-        Character turnaround reference for the protagonist.
-        Full-body head-to-toe, feet fully visible (no cropping). Neutral relaxed pose, centered framing.
-        Clean neutral background.
+        [シーン]
+        主人公のターンアラウンド参照画像。
+        全身（頭からつま先まで）を入れ、足先が切れない（クロップしない）。ニュートラルな姿勢で中央構図。
+        背景はクリーンで無地。
 
-        [AVOID]
-        animated, cartoon, anime, illustrated, drawing. Any text.
+        [禁止]
+        アニメ/漫画/イラスト調。あらゆる文字要素。
       output: "assets/characters/protagonist_front.png"
       aspect_ratio: "16:9"
       image_size: "2K"
@@ -81,8 +83,8 @@ scenes:
       iterations: 4
       selected: null
 
-  # 1) Scene still images + transitions (guide is narration-only)
-  # Recommended: use scene_id in steps of 10 so you can insert mid-scenes later (e.g., 35 between 30 and 40).
+  # 1) scene静止画 + つなぎ動画（ガイドは音声のみ）
+  # 推奨: scene_id を10刻みにする（後で差し込みやすい）。
   - scene_id: 10
     timestamp: "00:00-00:08"
     image_generation:
@@ -90,26 +92,26 @@ scenes:
       character_ids: ["protagonist"]
       object_ids: []
       prompt: |
-        [GLOBAL / INVARIANTS]
-        First-person POV from ride action boat. Realistic hands gripping ornate brass safety bar in the lower foreground.
-        Theme park ride track with central rail visible, centered. Photorealistic, cinematic, practical effects.
-        No text, no subtitles, no watermark, no logo.
+        [全体 / 不変条件]
+        一人称POVのライド（アクションボート）。手は画面下の前景に必ず入れ、安全バーを握っている。
+        テーマパークのライド軌道（中央レール）が中央に見える。実写、シネマティック、実物セット感。
+        画面内テキストなし、字幕なし、ウォーターマークなし、ロゴなし。
 
-        [CHARACTERS]
-        The story character(s) must match their reference image exactly (same face, hair, outfit).
+        [登場人物]
+        登場人物は参照画像と完全一致（顔、髪型、服装が同一）。
 
-        [PROPS / SETPIECES]
+        [小道具 / 舞台装置]
 
-        [SCENE]
-        Setting: the ride enters the world of <topic>. Practical set pieces, real lighting.
-        Key moment: the first story character appears ahead, drawing you into the world.
-        Composition: hands+bar foreground; track centered; story character mid-ground; destination far background.
+        [シーン]
+        舞台: <topic> の世界へ入る入口。実物セット、実写照明。
+        見せ場: 最初の登場人物が前方に現れ、世界へ引き込まれる。
+        構図: 手+安全バーが前景、軌道は中央、登場人物は中景、目的地は遠景。
 
-        [CONTINUITY]
-        Set up next: track continues smoothly; lighting transitions naturally into scene 2.
+        [連続性]
+        次への仕込み: 軌道が自然につながり、照明が滑らかに遷移する。
 
-        [AVOID]
-        animated, cartoon, anime, illustrated, drawing. Distorted hands, extra fingers. Any text.
+        [禁止]
+        アニメ/漫画/イラスト調。手の崩れ、指の増殖。あらゆる文字要素。
       output: "assets/scenes/scene10.png"
       aspect_ratio: "16:9"
       image_size: "2K"
@@ -127,7 +129,7 @@ scenes:
       output: "assets/scenes/scene10_to_20.mp4"
     audio:
       narration:
-        text: "TODO: full narration text"
+        text: "TODO: ナレーション全文"
         tool: "elevenlabs"
         output: "assets/audio/narration.mp3"
         normalize_to_scene_duration: false
@@ -139,27 +141,27 @@ scenes:
       character_ids: ["protagonist"]
       object_ids: []
       prompt: |
-        [GLOBAL / INVARIANTS]
-        First-person POV from ride action boat. Realistic hands gripping ornate brass safety bar in the lower foreground.
-        Theme park ride track with central rail visible, centered. Photorealistic, cinematic, practical effects.
-        No text, no subtitles, no watermark, no logo.
+        [全体 / 不変条件]
+        一人称POVのライド（アクションボート）。手は画面下の前景に必ず入れ、安全バーを握っている。
+        テーマパークのライド軌道（中央レール）が中央に見える。実写、シネマティック、実物セット感。
+        画面内テキストなし、字幕なし、ウォーターマークなし、ロゴなし。
 
-        [CHARACTERS]
-        The story character(s) must match their reference image exactly.
+        [登場人物]
+        登場人物は参照画像と完全一致。
 
-        [PROPS / SETPIECES]
+        [小道具 / 舞台装置]
 
-        [SCENE]
-        Setting: the ride advances deeper into the <topic> world; practical fog and subtle water spray.
-        Key moment: the story character reacts to the next event ahead.
-        Composition: story character mid-ground; event/reveal far background; track remains centered.
+        [シーン]
+        舞台: <topic> の世界をさらに進む。実物の霧と軽い水しぶき（プラクティカル）。
+        見せ場: 前方の出来事に登場人物が反応する。
+        構図: 登場人物は中景、出来事/発見は遠景、軌道は中央を維持。
 
-        [CONTINUITY]
-        Must match previous: same hands + brass bar details; same forward direction.
-        Set up next: gentle left curve begins; cue the next scene reveal.
+        [連続性]
+        前と一致: 手と安全バーのディテール、前進方向。
+        次への仕込み: 緩やかな左カーブが始まり、次の発見を予告する。
 
-        [AVOID]
-        animated, cartoon, anime, illustrated, drawing. Distorted hands, extra fingers. Any text.
+        [禁止]
+        アニメ/漫画/イラスト調。手の崩れ、指の増殖。あらゆる文字要素。
       output: "assets/scenes/scene20.png"
       aspect_ratio: "16:9"
       image_size: "2K"
@@ -173,7 +175,7 @@ scenes:
       duration_seconds: 8
       first_frame: "assets/scenes/scene20.png"
       last_frame: "assets/scenes/scene30.png"
-      motion_prompt: "Continue forward along the track with a gentle curve; maintain POV and hands."
+      motion_prompt: "緩やかなカーブを描きながら前進を継続。POVと手と安全バーの位置を維持。"
       output: "assets/scenes/scene20_to_30.mp4"
 
   - scene_id: 30
@@ -183,26 +185,26 @@ scenes:
       character_ids: ["protagonist"]
       object_ids: []
       prompt: |
-        [GLOBAL / INVARIANTS]
-        First-person POV from ride action boat. Realistic hands gripping ornate brass safety bar in the lower foreground.
-        Theme park ride track with central rail visible, centered. Photorealistic, cinematic, practical effects.
-        No text, no subtitles, no watermark, no logo.
+        [全体 / 不変条件]
+        一人称POVのライド（アクションボート）。手は画面下の前景に必ず入れ、安全バーを握っている。
+        ライド軌道（中央レール）は中央。実写、シネマティック、実物セット感。
+        画面内テキストなし、字幕なし、ウォーターマークなし、ロゴなし。
 
-        [CHARACTERS]
-        The story character(s) must match their reference image exactly and is clearly visible.
+        [登場人物]
+        登場人物は参照画像と完全一致し、はっきり見える。
 
-        [PROPS / SETPIECES]
+        [小道具 / 舞台装置]
 
-        [SCENE]
-        Setting: a climactic reveal area in the <topic> world, built as practical set pieces with cinematic lighting.
-        Key moment: the reveal fills the background while the story character reacts to it.
-        Composition: hands+bar foreground; story character mid-ground; reveal far background; track centered.
+        [シーン]
+        舞台: <topic> のクライマックス的な“発見”エリア（実物セット + 映画照明）。
+        見せ場: 遠景の発見が画面を満たし、登場人物が反応する。
+        構図: 手+安全バーが前景、登場人物が中景、発見が遠景、軌道は中央。
 
-        [CONTINUITY]
-        Must match previous: same lighting direction and forward motion setup.
+        [連続性]
+        前と一致: 照明方向と前進の段取り。
 
-        [AVOID]
-        animated, cartoon, anime, illustrated, drawing. Distorted hands, extra fingers. Any text.
+        [禁止]
+        アニメ/漫画/イラスト調。手の崩れ、指の増殖。あらゆる文字要素。
       output: "assets/scenes/scene30.png"
       aspect_ratio: "16:9"
       image_size: "2K"
@@ -218,18 +220,18 @@ scenes:
       character_ids: []
       object_ids: []
       prompt: |
-        [GLOBAL / INVARIANTS]
-        First-person POV from ride action boat. Realistic hands gripping ornate brass safety bar in the lower foreground.
-        Theme park ride track with central rail visible, centered. Photorealistic, cinematic, practical effects.
-        No text, no subtitles, no watermark, no logo.
+        [全体 / 不変条件]
+        一人称POVのライド（アクションボート）。手は画面下の前景に必ず入れ、安全バーを握っている。
+        ライド軌道（中央レール）は中央。実写、シネマティック、実物セット感。
+        画面内テキストなし、字幕なし、ウォーターマークなし、ロゴなし。
 
-        [PROPS / SETPIECES]
+        [小道具 / 舞台装置]
 
-        [SCENE]
-        B-roll: environment-only moment in the <topic> world (no story characters visible). Practical set pieces, cinematic lighting.
+        [シーン]
+        B-roll: <topic> 世界の環境だけを見せる（登場人物は映らない）。実物セット + 映画照明。
 
-        [AVOID]
-        animated, cartoon, anime, illustrated, drawing. Any text.
+        [禁止]
+        アニメ/漫画/イラスト調。あらゆる文字要素。
       output: "assets/scenes/scene40.png"
       aspect_ratio: "16:9"
       image_size: "2K"

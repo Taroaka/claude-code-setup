@@ -83,6 +83,15 @@ run root:
 `state.txt` に追記（例）:
 
 - `runtime.stage=research|story|script|manifest|assets|render|done`
+- `runtime.render.status=started|success|failed`
+- `artifact.video=output/<topic>_<timestamp>/video.mp4`
+- `review.video.status=pending|approved|changes_requested`（最終判断は人間）
+
+人間の承認（例）:
+
+```bash
+python scripts/toc-state.py approve-video --run-dir output/<topic>_<timestamp> --note "OK"
+```
 
 ## 参照
 

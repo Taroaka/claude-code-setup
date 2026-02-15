@@ -22,12 +22,13 @@ model: inherit
 
 - `output/<topic>_<timestamp>/script.md`
 - `output/<topic>_<timestamp>/video_manifest.md`
+- `output/<topic>_<timestamp>/scene_conte.md`
 
 ## Finished video spec（必須）
 
 - 16:9 / 1280x720 / 24fps
-- photorealistic / cinematic / practical effects
-- 一貫した First-person POV（scene間で「視点のアンカー」を固定する）
+- 実写 / シネマティック / 実物セット感（プラクティカルエフェクト）
+- 一貫した 一人称POV（scene間で「視点のアンカー」を固定する）
 
 ## experience の扱い（重要）
 
@@ -45,23 +46,23 @@ model: inherit
 
 必ず全sceneのpromptに含める:
 
-- `First-person POV from ride action boat`
-- `Realistic hands gripping ornate brass safety bar`
+- `一人称POVのライド（アクションボート）`
+- `画面下の前景に手があり、安全バーを握っている`
 
 ### `cloud_island_walk`
 
 必ず全sceneのpromptに含める（推奨セット）:
 
-- `First-person POV walking forward`
-- `paradise island floating above a sea of clouds`（概念を実写の比喩として表現）
-- `stable horizon, consistent camera height, centered path/leading lines`（POVの連続性アンカー）
-- `No on-screen text`（文字で説明しない）
+- `一人称POVで前進しながら歩く`
+- `雲海の上に浮かぶ楽園の島`（概念を実写の比喩として表現）
+- `水平線安定、カメラ高さ一定、道/導線を中央`（POVの連続性アンカー）
+- `画面内テキストなし`（文字で説明しない）
 
 禁止（絶対に入れない・寄せない）:
 
-- `animated / animation / cartoon / anime / illustrated / drawing`
-- `Studio Ghibli style`
-- `third-person / over-the-shoulder / selfie`
+- `アニメ/漫画/イラスト調`
+- `ジブリ風`
+- `三人称 / 肩越し / 自撮り`
 
 ## prompt の書き方（重要）
 
@@ -69,12 +70,12 @@ model: inherit
 
 - 正本: `docs/implementation/image-prompting.md`
 - 推奨ブロック（順序固定）:
-  1. `GLOBAL / INVARIANTS`
-  2. `CHARACTERS`
-  3. `PROPS / SETPIECES`
-  4. `SCENE`
-  5. `CONTINUITY`
-  6. `AVOID`
+  1. `全体 / 不変条件`
+  2. `登場人物`
+  3. `小道具 / 舞台装置`
+  4. `シーン`
+  5. `連続性`
+  6. `禁止`
 - Midjourney 専用構文（`--ar` 等）は使わない（aspect ratio / size は YAML フィールドで指定する）
 
 ## 台本方針
@@ -95,8 +96,10 @@ model: inherit
 
 ## `video_manifest.md` の作り方（このコマンド用）
 
+- 言語: `video_manifest.md` の本文（prompt / fixed_prompts / notes 等）は **日本語**で書く（修正指示を日本語で出しやすくするため）。見出しは日本語推奨（例: `[全体 / 不変条件]` 等）。
 - run root の `assets/` を使う（`assets/characters`, `assets/objects`, `assets/scenes`, `assets/audio`）
 - `assets.character_bible` を作り、参照画像の出力先を決める
+  - 人間キャラは原則「映画俳優レベルの魅力」で設計する（例: balanced facial features / clear skin / expressive eyes / camera-ready presence）
 - 重要アイテム/舞台装置は `assets.object_bible` を作り、**キャラ同様に設計→参照画像→scene参照**の流れにする
   - 例: 竜宮城 / 玉手箱（背景ではなく“主役級”）
   - 各 object は `reference_images` を必ず持ち、どれかの scene がそのパスを `image_generation.output` として生成する（reference scene）
@@ -108,6 +111,10 @@ model: inherit
   - キャラクターがいないsceneでも `character_ids: []` を必ず明示する（生成スクリプトの検証を通すため）
   - object/setpiece も同様に、各sceneで `image_generation.object_ids: [...]` を必ず明示する（無ければ `[]`）
   - 解像度は素材側で 2K を指定（最終は 720p に落とす）
+- シーンを「複数カット」にする（推奨）:
+  - 1つの story scene を `scenes[].cuts[]` に分解し、各cutで `image_generation.output` を `assets/scenes/scene<scene_id>_<cut>.png` にする
+  - 各cutの隣接画像を `video_generation.first_frame/last_frame` にして、**1シーンあたり複数clip（8秒程度）**を作る
+  - これにより、英雄の旅/感情カーブを “カット列” で作りやすくする
 - 動画生成:
   - 各clipは **8秒**
   - `scenes[].video_generation.tool` はユーザー指示に合わせて選ぶ（未指定なら `google_veo_3_1`）

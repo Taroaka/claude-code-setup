@@ -1,6 +1,6 @@
-# Scene Video Manifest Template (single scene)
+# scene単体: 動画マニフェストテンプレ
 
-This template is used for `output/<topic>_<timestamp>/scenes/sceneXX/video_manifest.md`.
+このテンプレは `output/<topic>_<timestamp>/scenes/sceneXX/video_manifest.md` 用。
 
 ```yaml
 video_metadata:
@@ -26,20 +26,20 @@ scenes:
       tool: "google_nanobanana_pro"
       character_ids: ["character_id_here"]  # Use [] for B-roll scenes with no characters visible
       prompt: |
-        [GLOBAL / INVARIANTS]
-        TODO: style/pov invariants. No text, no subtitles, no watermark.
+        [全体 / 不変条件]
+        TODO: スタイル/POVの不変条件。画面内テキストなし、字幕なし、ウォーターマークなし。
 
-        [CHARACTERS]
-        TODO: who is present + must-match reference rules (if any).
+        [登場人物]
+        TODO: 誰が映るか + 参照一致ルール（必要なら）。
 
-        [SCENE]
-        TODO: setting + key moment + composition (foreground/midground/background).
+        [シーン]
+        TODO: 舞台 + 見せ場 + 構図（前景/中景/遠景）。
 
-        [CONTINUITY]
-        TODO: must match prev / set up next.
+        [連続性]
+        TODO: 前と一致 / 次への仕込み。
 
-        [AVOID]
-        TODO: forbid list (e.g., text/watermark/logo + unwanted styles).
+        [禁止]
+        TODO: 禁止（例: 文字/ウォーターマーク/ロゴ + 望まないスタイル）。
       output: "assets/scenes/scene1_base.png"
       iterations: 4
       selected: null
@@ -48,11 +48,11 @@ scenes:
       # tool: "kling_3_0"
       tool: "google_veo_3_1"
       input_image: "assets/scenes/scene1_base.png"
-      motion_prompt: "TODO: camera/motion"
+      motion_prompt: "TODO: カメラ/動き"
       output: "assets/scenes/scene1_video.mp4"
     audio:
       narration:
-        text: "TODO: narration"
+        text: "TODO: ナレーション"
         tool: "elevenlabs"
         output: "assets/audio/scene1_narration.mp3"
       bgm:
