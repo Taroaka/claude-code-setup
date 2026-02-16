@@ -31,7 +31,7 @@ state:
 
 providers:
   image: google_nanobanana_pro
-  video: google_veo_3_1
+  video: kling_3_0
   tts: elevenlabs
   llm: langchain
 

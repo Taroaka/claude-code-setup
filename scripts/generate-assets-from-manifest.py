@@ -1630,6 +1630,7 @@ def generate_kling_video(
     resolution: str,
     input_image: Path | None,
     last_frame_image: Path | None,
+    extra_payload: dict[str, Any] | None,
     out_path: Path,
     poll_every: float,
     timeout_seconds: float,
@@ -1658,6 +1659,7 @@ def generate_kling_video(
             last_frame_image=last_frame_image,
             negative_prompt=(negative_prompt.strip() or None),
             model=model,
+            extra_payload=extra_payload,
             timeout_seconds=180.0,
         )
         operation_id = client.extract_operation_id(submit)
@@ -1831,8 +1833,21 @@ def main() -> None:
 
     # Kling
     parser.add_argument("--kling-api-base", default=_env("KLING_API_BASE", "https://api.klingai.com"))
-    parser.add_argument("--kling-api-key", default=_env("KLING_API_KEY"))
+    parser.add_argument("--kling-api-key", default=_env("KLING_API_KEY"), help="Gateway-style API key (optional).")
+    parser.add_argument("--kling-access-key", default=_env("KLING_ACCESS_KEY"), help="Official Kling AccessKey (recommended).")
+    parser.add_argument("--kling-secret-key", default=_env("KLING_SECRET_KEY"), help="Official Kling SecretKey (recommended).")
     parser.add_argument("--kling-video-model", default=_env("KLING_VIDEO_MODEL", "kling-3.0"))
+    parser.add_argument("--kling-extra-json", default=_env("KLING_EXTRA_JSON", None), help="Optional JSON object merged into Kling request payload.")
+    parser.add_argument(
+        "--kling-omni-video-model",
+        default=_env("KLING_OMNI_VIDEO_MODEL", "kling-3.0-omni"),
+        help='Model used when manifest tool is "kling_3_0_omni" (default can be overridden via KLING_OMNI_VIDEO_MODEL).',
+    )
+    parser.add_argument(
+        "--kling-omni-extra-json",
+        default=_env("KLING_OMNI_EXTRA_JSON", None),
+        help="Optional JSON object merged into Kling request payload when using kling_3_0_omni.",
+    )
 
     # logging
     parser.add_argument("--log-dir", default=None, help="Directory to write provider logs (default: <base>/logs/providers).")
@@ -1847,6 +1862,23 @@ def main() -> None:
     parser.add_argument("--tts-prompt-suffix", default="", help="Optional text appended to every TTS input.")
 
     args = parser.parse_args()
+
+    def _parse_optional_json_object(value: str | None, *, flag_name: str) -> dict[str, Any] | None:
+        if value is None:
+            return None
+        raw = value.strip()
+        if raw == "":
+            return None
+        try:
+            loaded = json.loads(raw)
+        except json.JSONDecodeError as e:
+            raise SystemExit(f"{flag_name} is not valid JSON: {e}") from e
+        if not isinstance(loaded, dict):
+            raise SystemExit(f"{flag_name} must be a JSON object.")
+        return loaded
+
+    kling_extra_payload = _parse_optional_json_object(args.kling_extra_json, flag_name="--kling-extra-json")
+    kling_omni_extra_payload = _parse_optional_json_object(args.kling_omni_extra_json, flag_name="--kling-omni-extra-json")
 
     manifest_path = Path(args.manifest)
     if not manifest_path.exists():
@@ -1980,7 +2012,7 @@ def main() -> None:
     needs_kling_video = (
         not args.skip_videos
         and any(
-            normalize_tool_name(scene.video_tool) in {"kling_3_0", "kling"}
+            normalize_tool_name(scene.video_tool) in {"kling_3_0", "kling", "kling_3_0_omni", "kling_omni", "kling-omni"}
             and scene.video_output
             and (scene_filter is None or scene.scene_id in scene_filter)
             for scene in scenes
@@ -2002,11 +2034,15 @@ def main() -> None:
 
     kling_client: KlingClient | None = None
     if not args.dry_run and needs_kling_video:
-        if not args.kling_api_key:
-            raise SystemExit("Missing KLING_API_KEY (required for Kling video generation).")
+        has_gateway_key = bool((args.kling_api_key or "").strip())
+        has_official_keys = bool((args.kling_access_key or "").strip()) and bool((args.kling_secret_key or "").strip())
+        if not (has_gateway_key or has_official_keys):
+            raise SystemExit("Missing Kling credentials (set KLING_API_KEY or KLING_ACCESS_KEY+KLING_SECRET_KEY).")
         kling_client = KlingClient(
-            KlingConfig(
+            KlingConfig.from_env(
                 api_key=args.kling_api_key,
+                access_key=args.kling_access_key,
+                secret_key=args.kling_secret_key,
                 api_base=args.kling_api_base,
                 video_model=args.kling_video_model,
             )
@@ -2439,10 +2475,15 @@ def main() -> None:
                         else:
                             out_path.parent.mkdir(parents=True, exist_ok=True)
                             out_path.write_bytes(concat_path.read_bytes())
-        elif tool in {"kling_3_0", "kling"}:
+        elif tool in {"kling_3_0", "kling", "kling_3_0_omni", "kling_omni", "kling-omni"}:
+            kling_model = args.kling_video_model
+            kling_payload = kling_extra_payload
+            if tool in {"kling_3_0_omni", "kling_omni", "kling-omni"}:
+                kling_model = args.kling_omni_video_model
+                kling_payload = kling_omni_extra_payload or kling_extra_payload
             generate_kling_video(
                 client=kling_client,
-                model=args.kling_video_model,
+                model=kling_model,
                 prompt=prompt,
                 negative_prompt=args.video_negative_prompt or "",
                 duration_seconds=int(dur),
@@ -2450,6 +2491,7 @@ def main() -> None:
                 resolution=args.video_resolution,
                 input_image=input_image,
                 last_frame_image=last_image,
+                extra_payload=kling_payload,
                 out_path=out_path,
                 poll_every=args.poll_every,
                 timeout_seconds=args.timeout_seconds,

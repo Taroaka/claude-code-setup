@@ -92,8 +92,9 @@ graph TD
 - Provider interfaces for image, video, TTS, and LLM.
 - LLM integration uses LangChain.
 - Image: Google Nano Banana Pro（Gemini Image / `gemini-3-pro-image-preview`）
-- Video: Google Veo 3.1（default。`video_generation.tool: google_veo_3_1`）
-- Video (alt): Kling 3.0（`video_generation.tool: kling_3_0`）
+- Video: Kling 3.0（default。`video_generation.tool: kling_3_0`）
+- Video (omni): Kling 3.0 Omni（`video_generation.tool: kling_3_0_omni`）
+- Video (alt): Google Veo 3.1（`video_generation.tool: google_veo_3_1`）
 - TTS: ElevenLabs
 - Swap providers via configuration without changing orchestration logic.
 

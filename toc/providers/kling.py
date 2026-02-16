@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import base64
+import hashlib
+import hmac
+import json
 import os
 import time
 from dataclasses import dataclass
@@ -83,31 +86,44 @@ def _first_non_empty(data: dict[str, Any], paths: list[str]) -> Any:
 
 @dataclass(frozen=True)
 class KlingConfig:
-    api_key: str
+    api_key: str | None = None
+    access_key: str | None = None
+    secret_key: str | None = None
     api_base: str = "https://api.klingai.com"
     video_model: str = "kling-3.0"
     submit_path: str = "/v1/videos/generations"
     status_path_template: str = "/v1/videos/generations/{operation_id}"
     api_key_header: str = "authorization"
     api_key_prefix: str = "Bearer "
+    jwt_expiration_seconds: int = 1800
+    jwt_clock_skew_seconds: int = 5
 
     @staticmethod
     def from_env(
         *,
         api_key: str | None = None,
+        access_key: str | None = None,
+        secret_key: str | None = None,
         api_base: str | None = None,
         video_model: str | None = None,
         submit_path: str | None = None,
         status_path_template: str | None = None,
         api_key_header: str | None = None,
         api_key_prefix: str | None = None,
+        jwt_expiration_seconds: int | None = None,
+        jwt_clock_skew_seconds: int | None = None,
     ) -> "KlingConfig":
-        key = api_key or _env("KLING_API_KEY")
-        if not key:
-            raise ValueError("Missing KLING_API_KEY")
+        key = (api_key or _env("KLING_API_KEY") or "").strip() or None
+        ak = (access_key or _env("KLING_ACCESS_KEY") or "").strip() or None
+        sk = (secret_key or _env("KLING_SECRET_KEY") or "").strip() or None
+
+        if not key and not (ak and sk):
+            raise ValueError("Missing Kling credentials (set KLING_API_KEY or KLING_ACCESS_KEY+KLING_SECRET_KEY).")
 
         return KlingConfig(
             api_key=key,
+            access_key=ak,
+            secret_key=sk,
             api_base=api_base or _env("KLING_API_BASE", "https://api.klingai.com") or "",
             video_model=video_model or _env("KLING_VIDEO_MODEL", "kling-3.0") or "",
             submit_path=submit_path or _env("KLING_VIDEO_SUBMIT_PATH", "/v1/videos/generations") or "",
@@ -116,22 +132,69 @@ class KlingConfig:
             or "",
             api_key_header=api_key_header or _env("KLING_API_KEY_HEADER", "authorization") or "",
             api_key_prefix=api_key_prefix or _env("KLING_API_KEY_PREFIX", "Bearer ") or "",
+            jwt_expiration_seconds=int(jwt_expiration_seconds or _env("KLING_JWT_EXPIRATION_SECONDS", None) or 1800),
+            jwt_clock_skew_seconds=int(jwt_clock_skew_seconds or _env("KLING_JWT_CLOCK_SKEW_SECONDS", None) or 5),
         )
 
 
 class KlingClient:
     def __init__(self, config: KlingConfig):
         self.config = config
+        self._cached_jwt: str | None = None
+        self._cached_jwt_exp: int | None = None
 
     @staticmethod
     def from_env(**overrides: Any) -> "KlingClient":
         return KlingClient(KlingConfig.from_env(**overrides))
 
+    def _base64url(self, data: bytes) -> str:
+        return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
+
+    def _build_jwt(self) -> tuple[str, int]:
+        if not self.config.access_key or not self.config.secret_key:
+            raise ValueError("Kling JWT auth requires access_key and secret_key.")
+
+        now = int(time.time())
+        exp = now + int(self.config.jwt_expiration_seconds)
+        nbf = now - int(self.config.jwt_clock_skew_seconds)
+
+        header = {"alg": "HS256", "typ": "JWT"}
+        payload = {"iss": self.config.access_key, "exp": exp, "nbf": nbf}
+
+        header_b64 = self._base64url(json.dumps(header, separators=(",", ":"), ensure_ascii=False).encode("utf-8"))
+        payload_b64 = self._base64url(json.dumps(payload, separators=(",", ":"), ensure_ascii=False).encode("utf-8"))
+        signing_input = f"{header_b64}.{payload_b64}".encode("ascii")
+        signature = hmac.new(self.config.secret_key.encode("utf-8"), signing_input, hashlib.sha256).digest()
+        jwt = f"{header_b64}.{payload_b64}.{self._base64url(signature)}"
+        return jwt, exp
+
+    def _get_jwt(self) -> str:
+        if self._cached_jwt and self._cached_jwt_exp:
+            # Refresh slightly before expiry (10% of lifetime or at least 10s).
+            now = int(time.time())
+            lifetime = int(self.config.jwt_expiration_seconds)
+            refresh_before = max(10, int(lifetime * 0.10))
+            if now < (int(self._cached_jwt_exp) - refresh_before):
+                return self._cached_jwt
+
+        jwt, exp = self._build_jwt()
+        self._cached_jwt = jwt
+        self._cached_jwt_exp = exp
+        return jwt
+
     def _headers(self) -> dict[str, str]:
+        token: str | None = None
+        if self.config.api_key:
+            token = self.config.api_key
+        elif self.config.access_key and self.config.secret_key:
+            token = self._get_jwt()
+        else:
+            raise ValueError("Kling credentials not configured.")
+
         key_header = self.config.api_key_header.strip()
         if key_header.lower() == "authorization":
-            return {"authorization": f"{self.config.api_key_prefix}{self.config.api_key}"}
-        return {key_header: self.config.api_key}
+            return {"authorization": f"{self.config.api_key_prefix}{token}"}
+        return {key_header: token}
 
     def _resolve_url(self, path_or_url: str, *, operation_id: str | None = None) -> str:
         if path_or_url.startswith("http://") or path_or_url.startswith("https://"):

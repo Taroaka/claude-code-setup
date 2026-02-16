@@ -431,9 +431,9 @@ def main() -> None:
     )
     parser.add_argument(
         "--video-tool",
-        choices=["veo", "kling"],
-        default="veo",
-        help='Video generation tool in manifests ("veo" uses google_veo_3_1, "kling" uses kling_3_0).',
+        choices=["kling", "kling-omni", "veo"],
+        default="kling",
+        help='Video generation tool in manifests ("kling" uses kling_3_0, "kling-omni" uses kling_3_0_omni, "veo" uses google_veo_3_1).',
     )
 
     args = parser.parse_args()
@@ -444,7 +444,12 @@ def main() -> None:
 
     run_dir = Path(args.run_dir) if args.run_dir else (Path(args.base) / f"{topic_slug}_{ts}")
     ensure_dir(run_dir)
-    video_tool = "kling_3_0" if args.video_tool == "kling" else "google_veo_3_1"
+    if args.video_tool == "kling":
+        video_tool = "kling_3_0"
+    elif args.video_tool == "kling-omni":
+        video_tool = "kling_3_0_omni"
+    else:
+        video_tool = "google_veo_3_1"
 
     # run-root defaults
     state_path = run_dir / "state.txt"

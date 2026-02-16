@@ -23,6 +23,13 @@
   - `.claude/commands/toc/toc-immersive-ride.md`
 - 実行手順（全体）: `docs/how-to-run.md`
 
+## `improve_claude_code/` の位置づけ
+
+- `improve_claude_code/` は ToC 本体とは別の「開発運用レイヤー」（multi-agent実行基盤）として同居している
+- ToC本体（`/toc-run` などの動画生成フロー）は `toc` / `scripts` / `docs` を中心に単体で実行可能
+- 並列AI実行や command pack / hooks / skills を使うときに `improve_claude_code/` を利用する
+- 連携時は `scripts/ai/multiagent.sh` を入口にし、`queue` / `dashboard.md` / `instructions` / `memory` をシンボリックリンクで project root に見せる
+
 ## state 管理（ファイル）
 
 state は **コード内の状態ではなく**、プロジェクトフォルダの **テキスト**で管理する。

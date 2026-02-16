@@ -46,7 +46,8 @@ scenes:
     video_generation:
       # tool: "google_veo_3_1"
       # tool: "kling_3_0"
-      tool: "google_veo_3_1"
+      # tool: "kling_3_0_omni"
+      tool: "kling_3_0"
       input_image: "assets/scenes/scene1_base.png"
       motion_prompt: "TODO: カメラ/動き"
       output: "assets/scenes/scene1_video.mp4"

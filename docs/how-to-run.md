@@ -82,8 +82,9 @@ output/<topic>_<timestamp>/
 
 - 画像: Google Nano Banana Pro（Gemini Image / `gemini-3-pro-image-preview`）
 - 画像（代替）: SeaDream / Seedream 4.5（`tool: "seadream"` + `SEADREAM_*`）
-- 動画: Google Veo 3.1（`video_generation.tool: "google_veo_3_1"`）
-- 動画（代替）: Kling 3.0（`video_generation.tool: "kling_3_0"` + `KLING_*`）
+- 動画: Kling 3.0（default。`video_generation.tool: "kling_3_0"` + `KLING_ACCESS_KEY`/`KLING_SECRET_KEY`）
+- 動画（Omni）: Kling 3.0 Omni（`video_generation.tool: "kling_3_0_omni"` + `KLING_OMNI_*`）
+- 動画（代替）: Google Veo 3.1（`video_generation.tool: "google_veo_3_1"` + `GEMINI_*`）
 - TTS: ElevenLabs
 - 当面は `video_manifest.md` を入力に素材生成→結合でフローを検証する
 - 具体は `docs/implementation/video-integration.md` を参照

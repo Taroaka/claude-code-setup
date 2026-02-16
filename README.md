@@ -1,11 +1,11 @@
-[![GitHub stars](https://img.shields.io/github/stars/centminmod/my-claude-code-setup.svg?style=flat-square)](https://github.com/centminmod/my-claude-code-setup/stargazers) [![GitHub forks](https://img.shields.io/github/forks/centminmod/my-claude-code-setup.svg?style=flat-square)](https://github.com/centminmod/my-claude-code-setup/network) [![GitHub issues](https://img.shields.io/github/issues/centminmod/my-claude-code-setup.svg?style=flat-square)](https://github.com/centminmod/my-claude-code-setup/issues)
+[![GitHub stars](https://img.shields.io/github/stars/Taroaka/toc.svg?style=flat-square)](https://github.com/Taroaka/toc/stargazers) [![GitHub forks](https://img.shields.io/github/forks/Taroaka/toc.svg?style=flat-square)](https://github.com/Taroaka/toc/network) [![GitHub issues](https://img.shields.io/github/issues/Taroaka/toc.svg?style=flat-square)](https://github.com/Taroaka/toc/issues)
 
 * Threads - https://www.threads.com/@george_sl_liu
 * BlueSky - https://bsky.app/profile/georgesl.bsky.social
 
 # My Claude Code Project's Starter Settings
 
-My Claude Code project's starter settings and Claude Code hooks and slash commands are provided in this repository for users to try out. The [CLAUDE.md](https://github.com/centminmod/my-claude-code-setup/blob/master/CLAUDE.md) is setup as set of memory bank files to better retain context over many chat sessions. Be sure to read the official Claude Code docs first at <https://docs.anthropic.com/en/docs/claude-code/overview> and sign up for a [paid Claude AI account](https://claude.ai/) to use Claude Code. You can pay for Claude Pro $20/month, Claude Max $100/month or Claude Max $200/month. The paid Claude tier plans will include varying quotas for usage and rate limits outlined [here](https://support.anthropic.com/en/articles/9797557-usage-limit-best-practices).
+My Claude Code project's starter settings and Claude Code hooks and slash commands are provided in this repository for users to try out. The [CLAUDE.md](https://github.com/Taroaka/toc/blob/master/CLAUDE.md) is setup as set of memory bank files to better retain context over many chat sessions. Be sure to read the official Claude Code docs first at <https://docs.anthropic.com/en/docs/claude-code/overview> and sign up for a [paid Claude AI account](https://claude.ai/) to use Claude Code. You can pay for Claude Pro $20/month, Claude Max $100/month or Claude Max $200/month. The paid Claude tier plans will include varying quotas for usage and rate limits outlined [here](https://support.anthropic.com/en/articles/9797557-usage-limit-best-practices).
 
 1. Copy the files in this Github repo to your project directory (where you intended codebase will be).
 2. Modify the template files and CLAUDE.md`to your liking. `.claude/settings.json` needs to install Terminal-Notifier for macOS https://github.com/centminmod/terminal-notifier-setup. If you're not using macOS, you can remove `.claude/settings.json`.
@@ -18,9 +18,19 @@ My Claude Code project's starter settings and Claude Code hooks and slash comman
 9. If you use Cloudflare and ClerkOS platforms in your apps, you can keep either `CLAUDE-cloudflare.md` or `CLAUDE-cloudflare-mini.md` supplementary reference docs and update `CLAUDE.md` referencing either file to help AI understand Cloudflare and ClerkOS platforum documentation and products. Edit documentation templates as needed i.e. if you do not use ClerkOS platform, you can remove those sections.
 10. Useful read [Advent of Claude: 31 Days of Claude Code by Ado Kukic from Anthropic](https://adocomplete.com/advent-of-claude-2025/).
 
+## ToC Integration Note (`improve_claude_code/`)
+
+In this workspace, `improve_claude_code/` is intentionally colocated with the ToC project.
+
+- `toc` side: story-topic to video generation pipeline (`/toc-run`, `/toc-scene-series`, `/toc-immersive-ride`)
+- `improve_claude_code/` side: optional multi-agent orchestration/runtime support (tmux workers, command pack, hooks, skills)
+- relation: keep `toc` as product pipeline and use `improve_claude_code/` as an operations/development booster when parallel AI execution is needed
+
+Practically, this means both can coexist: run ToC directly for normal flow, and use `scripts/ai/multiagent.sh` when you want the multi-agent workflow.
+
 ## CLAUDE.md Memory Bank system
 
-[CLAUDE.md](https://github.com/centminmod/my-claude-code-setup/blob/master/CLAUDE.md) uses a memory bank system of files for Claude Code to better retain context over many chat sessions. Example of Claude Code thinking output when I ask it to `update memory bank` after a successful task completion and git commit:
+[CLAUDE.md](https://github.com/Taroaka/toc/blob/master/CLAUDE.md) uses a memory bank system of files for Claude Code to better retain context over many chat sessions. Example of Claude Code thinking output when I ask it to `update memory bank` after a successful task completion and git commit:
 
 ```
 > update memory bank
@@ -830,7 +840,7 @@ Chrome Devtool MCP server takes up ~16,977 tokens across 26 MCP tools
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=centminmod/my-claude-code-setup&type=Date)](https://www.star-history.com/#centminmod/my-claude-code-setup&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=Taroaka/toc&type=Date)](https://www.star-history.com/#Taroaka/toc&Date)
 
 
 ## Stats

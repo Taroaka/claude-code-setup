@@ -57,7 +57,9 @@ def main() -> None:
     parser.add_argument("--last-image", default=None, help="Optional last-frame image path.")
     parser.add_argument("--model", default=_env("KLING_VIDEO_MODEL", "kling-3.0"))
     parser.add_argument("--api-base", default=_env("KLING_API_BASE", "https://api.klingai.com"))
-    parser.add_argument("--api-key", default=_env("KLING_API_KEY"))
+    parser.add_argument("--api-key", default=_env("KLING_API_KEY"), help="Gateway-style API key (optional).")
+    parser.add_argument("--access-key", default=_env("KLING_ACCESS_KEY"), help="Official Kling AccessKey (recommended).")
+    parser.add_argument("--secret-key", default=_env("KLING_SECRET_KEY"), help="Official Kling SecretKey (recommended).")
     parser.add_argument("--submit-path", default=_env("KLING_VIDEO_SUBMIT_PATH", "/v1/videos/generations"))
     parser.add_argument(
         "--status-path-template",
@@ -124,6 +126,8 @@ def main() -> None:
     try:
         config = KlingConfig.from_env(
             api_key=args.api_key,
+            access_key=args.access_key,
+            secret_key=args.secret_key,
             api_base=args.api_base,
             video_model=args.model,
             submit_path=args.submit_path,

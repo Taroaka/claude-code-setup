@@ -60,6 +60,13 @@ def must_env(name: str) -> str:
     return v
 
 
+def must_kling_credentials() -> None:
+    has_gateway_key = bool((os.environ.get("KLING_API_KEY") or "").strip())
+    has_official_keys = bool((os.environ.get("KLING_ACCESS_KEY") or "").strip()) and bool((os.environ.get("KLING_SECRET_KEY") or "").strip())
+    if not (has_gateway_key or has_official_keys):
+        raise SystemExit("Missing Kling credentials (set KLING_API_KEY or KLING_ACCESS_KEY+KLING_SECRET_KEY).")
+
+
 def run(cmd: list[str]) -> None:
     subprocess.run(cmd, check=True)
 
@@ -258,9 +265,9 @@ def main() -> None:
     )
     parser.add_argument(
         "--video-tool",
-        choices=["veo", "kling"],
-        default="veo",
-        help='Video generation tool in manifest ("veo" uses google_veo_3_1, "kling" uses kling_3_0).',
+        choices=["kling", "kling-omni", "veo"],
+        default="kling",
+        help='Video generation tool in manifest ("kling" uses kling_3_0, "kling-omni" uses kling_3_0_omni, "veo" uses google_veo_3_1).',
     )
 
     # Prompt overrides applied at API-call time (not baked into manifest).
@@ -321,8 +328,8 @@ def main() -> None:
         must_env("GEMINI_API_KEY")
     if args.video_tool == "veo":
         must_env("GEMINI_API_KEY")
-    elif args.video_tool == "kling":
-        must_env("KLING_API_KEY")
+    elif args.video_tool in {"kling", "kling-omni"}:
+        must_kling_credentials()
     voice_id = ""
     if not args.skip_audio:
         must_env("ELEVENLABS_API_KEY")
@@ -365,7 +372,11 @@ def main() -> None:
         created_at=dt.datetime.now().astimezone().isoformat(timespec="seconds"),
         scenes=scenes,
         max_scenes=int(args.max_scenes) if args.max_scenes else None,
-        video_tool=("kling_3_0" if args.video_tool == "kling" else "google_veo_3_1"),
+        video_tool=(
+            "kling_3_0"
+            if args.video_tool == "kling"
+            else ("kling_3_0_omni" if args.video_tool == "kling-omni" else "google_veo_3_1")
+        ),
         out_path=manifest_path,
     )
 

@@ -121,7 +121,8 @@ scenes:
     video_generation:
       # tool: "google_veo_3_1"
       # tool: "kling_3_0"
-      tool: "google_veo_3_1"
+      # tool: "kling_3_0_omni"
+      tool: "kling_3_0"
       duration_seconds: 8
       first_frame: "assets/scenes/scene10.png"
       last_frame: "assets/scenes/scene20.png"
@@ -171,7 +172,8 @@ scenes:
     video_generation:
       # tool: "google_veo_3_1"
       # tool: "kling_3_0"
-      tool: "google_veo_3_1"
+      # tool: "kling_3_0_omni"
+      tool: "kling_3_0"
       duration_seconds: 8
       first_frame: "assets/scenes/scene20.png"
       last_frame: "assets/scenes/scene30.png"
