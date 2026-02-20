@@ -25,6 +25,12 @@
 - `KLING_VIDEO_MODEL`: 通常 Kling のモデル名（例: `kling-3.0`）
 - `KLING_OMNI_VIDEO_MODEL`: Omni のモデル名（初期値は `kling-3.0-omni` だが、必要なら差し替え）
 
+### `KLING_API_BASE`（どれを使うべき？）
+
+- このrepoのデフォルトは `https://api.klingai.com`。
+- ただし環境/アカウントによっては、`https://api-singapore.klingai.com` のようなリージョン別ドメインが案内される例もあります。
+- 公式の案内に合わせて `KLING_API_BASE` を上書きしてください（コード側は base URL を文字列として扱うだけなので差し替え可能です）。
+
 ## env（エンドポイント差し替え）
 
 ベンダ/ゲートウェイによってパスが異なる場合に備えて、以下は上書き可能です。

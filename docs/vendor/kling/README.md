@@ -20,6 +20,7 @@
 ## 参照リンク（更新の起点）
 
 - 公式 Developer Docs（要ログイン/閲覧制限の可能性あり）: https://app.klingai.com/global/dev/document-api/apiReference/user/whatIsKling
+- 公式 API base URL（このrepo既定）: `https://api.klingai.com`（リージョン別ドメインが案内される場合は `KLING_API_BASE` を上書き）
 - Kling API Docs（第三者: `klingapi.com`）: https://klingapi.com/docs
 - Kling 3.0 Omni（第三者: PiAPI）: https://piapi.ai/docs/kling-api/kling-3-omni-api
 - Kling 3.0 Pricing（第三者: kling3-ai.com）: https://www.kling3-ai.com/pricing
