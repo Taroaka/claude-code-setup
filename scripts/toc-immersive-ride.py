@@ -68,9 +68,9 @@ def main() -> None:
     )
     parser.add_argument(
         "--video-tool",
-        choices=["kling", "kling-omni", "veo"],
+        choices=["kling", "kling-omni", "seedance", "veo"],
         default="kling-omni",
-        help='Video generation tool in manifest ("kling" or "kling-omni"). "veo" is mapped to Kling for safety.',
+        help='Video generation tool in manifest ("kling", "kling-omni", or "seedance"). "veo" is mapped to Kling for safety.',
     )
     parser.add_argument("--force", action="store_true", help="Overwrite existing files.")
     args = parser.parse_args()
@@ -128,6 +128,10 @@ def main() -> None:
         if args.video_tool == "kling":
             tmpl = re.sub(r'(?m)^(\s*)tool: "google_veo_3_1"\s*$', r'\1tool: "kling_3_0"', tmpl)
             tmpl = re.sub(r'(?m)^(\s*)tool: "kling_3_0_omni"\s*$', r'\1tool: "kling_3_0"', tmpl)
+        elif args.video_tool == "seedance":
+            tmpl = re.sub(r'(?m)^(\s*)tool: "google_veo_3_1"\s*$', r'\1tool: "seedance"', tmpl)
+            tmpl = re.sub(r'(?m)^(\s*)tool: "kling_3_0"\s*$', r'\1tool: "seedance"', tmpl)
+            tmpl = re.sub(r'(?m)^(\s*)tool: "kling_3_0_omni"\s*$', r'\1tool: "seedance"', tmpl)
         elif args.video_tool in {"kling-omni", "veo"}:
             if args.video_tool == "veo":
                 print('[warn] --video-tool veo is disabled for safety; using kling_3_0_omni instead.')

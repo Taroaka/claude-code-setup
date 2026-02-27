@@ -1,0 +1,224 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import re
+import shutil
+from pathlib import Path
+from typing import Any
+
+try:
+    import yaml  # type: ignore[import-not-found]
+except ModuleNotFoundError:  # pragma: no cover
+    yaml = None
+
+
+def now_iso() -> str:
+    return dt.datetime.now().astimezone().isoformat(timespec="seconds")
+
+
+def extract_yaml_block(text: str) -> str:
+    m = re.search(r"```yaml\s*\n(.*?)\n```", text, flags=re.DOTALL)
+    if not m:
+        raise SystemExit("No ```yaml ... ``` block found in manifest markdown.")
+    return m.group(1)
+
+
+def replace_yaml_block(text: str, new_yaml: str) -> str:
+    m = re.search(r"```yaml\s*\n(.*?)\n```", text, flags=re.DOTALL)
+    if not m:
+        raise SystemExit("No ```yaml ... ``` block found in manifest markdown.")
+    start, end = m.span(1)
+    return text[:start] + new_yaml.rstrip("\n") + text[end:]
+
+
+def append_state_block(state_path: Path, kv: dict[str, str]) -> None:
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    lines = [f"{k}={v}" for k, v in kv.items()]
+    block = "\n".join(lines) + "\n---\n"
+    if state_path.exists():
+        state_path.write_text(state_path.read_text(encoding="utf-8") + block, encoding="utf-8")
+        return
+    state_path.write_text(block, encoding="utf-8")
+
+
+def _as_int(value: Any) -> int | None:
+    try:
+        return int(value)
+    except Exception:
+        return None
+
+
+def _ensure_list(value: Any) -> list:
+    return value if isinstance(value, list) else []
+
+
+def _validate_cut_scene_file(
+    path: Path, *, min_cuts: int, max_cuts: int, allow_todo_prompts: bool
+) -> tuple[int, list[dict]] | None:
+    if yaml is None:
+        raise SystemExit("PyYAML is required. Install with: pip install pyyaml")
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        return None
+    scene_id = _as_int(data.get("scene_id"))
+    if scene_id is None:
+        return None
+    cuts = data.get("cuts")
+    if not isinstance(cuts, list) or not cuts:
+        return None
+    if not (min_cuts <= len(cuts) <= max_cuts):
+        return None
+
+    normalized: list[dict] = []
+    for idx, raw in enumerate(cuts, start=1):
+        if not isinstance(raw, dict):
+            return None
+        cut_id = _as_int(raw.get("cut_id")) or idx
+        ig = raw.get("image_generation")
+        if not isinstance(ig, dict):
+            return None
+        prompt = ig.get("prompt")
+        if prompt is None or str(prompt).strip() == "":
+            return None
+        if not allow_todo_prompts and "[TODO]" in str(prompt):
+            return None
+        output = ig.get("output")
+        if output is None or str(output).strip() == "":
+            ig["output"] = f"assets/scenes/scene{scene_id:02d}_cut{cut_id:02d}.png"
+        if "character_ids" not in ig:
+            ig["character_ids"] = []
+        if "object_ids" not in ig:
+            ig["object_ids"] = []
+        if "aspect_ratio" not in ig:
+            ig["aspect_ratio"] = "16:9"
+        if "image_size" not in ig:
+            ig["image_size"] = "2K"
+        if "references" not in ig:
+            ig["references"] = []
+
+        out_cut = dict(raw)
+        out_cut["cut_id"] = int(cut_id)
+        out_cut["image_generation"] = ig
+        normalized.append(out_cut)
+
+    normalized.sort(key=lambda c: int(_as_int(c.get("cut_id")) or 0))
+    return int(scene_id), normalized
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Merge per-scene cuts scratch files into an immersive video_manifest.md (single-writer).")
+    parser.add_argument("--run-dir", required=True, help="Immersive run dir containing video_manifest.md and scratch/cuts/*.yaml")
+    parser.add_argument("--min-cuts", type=int, default=3)
+    parser.add_argument("--max-cuts", type=int, default=5)
+    parser.add_argument(
+        "--allow-todo-prompts",
+        action="store_true",
+        help='Allow merging scratch files that still contain "[TODO]" in prompts (NOT recommended).',
+    )
+    parser.add_argument("--force", action="store_true", help="Overwrite scenes that already have cuts.")
+    parser.add_argument("--no-backup", action="store_true", help="Do not create video_manifest.md.bak before writing.")
+    args = parser.parse_args()
+
+    run_dir = Path(args.run_dir).resolve()
+    manifest_path = run_dir / "video_manifest.md"
+    if not manifest_path.exists():
+        raise SystemExit(f"Manifest not found: {manifest_path}")
+
+    scratch_dir = run_dir / "scratch" / "cuts"
+    if not scratch_dir.exists():
+        raise SystemExit(f"Scratch not found: {scratch_dir} (run toc-immersive-cuts-multiagent.py first)")
+
+    if yaml is None:
+        raise SystemExit("PyYAML is required. Install with: pip install pyyaml")
+
+    md = manifest_path.read_text(encoding="utf-8")
+    y = extract_yaml_block(md)
+    manifest = yaml.safe_load(y)
+    if not isinstance(manifest, dict):
+        raise SystemExit("Manifest YAML must be a mapping at the root.")
+    raw_scenes = manifest.get("scenes")
+    if not isinstance(raw_scenes, list):
+        raise SystemExit("Manifest YAML scenes must be a list.")
+
+    excluded = {0, 100, 101}
+    scratch_files = sorted(scratch_dir.glob("scene*.yaml"))
+    if not scratch_files:
+        raise SystemExit(f"No scratch files found in: {scratch_dir}")
+
+    cuts_by_scene: dict[int, list[dict]] = {}
+    for f in scratch_files:
+        parsed = _validate_cut_scene_file(
+            f,
+            min_cuts=int(args.min_cuts),
+            max_cuts=int(args.max_cuts),
+            allow_todo_prompts=bool(args.allow_todo_prompts),
+        )
+        if parsed is None:
+            continue
+        sid, cuts = parsed
+        if sid in excluded or sid < 2 or sid >= 100:
+            continue
+        cuts_by_scene[int(sid)] = cuts
+
+    if not cuts_by_scene:
+        print("No mergeable scratch scenes found (maybe prompts still contain [TODO]).")
+        print("Edit scratch/cuts/sceneXX.yaml, then re-run merge.")
+        return
+
+    changed: list[int] = []
+    for s in raw_scenes:
+        if not isinstance(s, dict):
+            continue
+        sid = _as_int(s.get("scene_id"))
+        if sid is None:
+            continue
+        if sid not in cuts_by_scene:
+            continue
+        if sid in excluded:
+            continue
+
+        has_cuts = isinstance(s.get("cuts"), list) and bool(s.get("cuts"))
+        if has_cuts and not args.force:
+            continue
+
+        s.pop("image_generation", None)
+        s.pop("video_generation", None)
+        s.pop("audio", None)
+        s.pop("narration", None)
+        s["cuts"] = cuts_by_scene[int(sid)]
+        changed.append(int(sid))
+
+    if not changed:
+        print("No scenes changed (maybe already have cuts; try --force).")
+        return
+
+    new_yaml = yaml.safe_dump(manifest, sort_keys=False, allow_unicode=True)
+
+    if not args.no_backup:
+        backup = manifest_path.with_suffix(".md.bak")
+        shutil.copy2(manifest_path, backup)
+
+    manifest_path.write_text(replace_yaml_block(md, new_yaml), encoding="utf-8")
+
+    state_path = run_dir / "state.txt"
+    if state_path.exists():
+        append_state_block(
+            state_path,
+            {
+                "timestamp": now_iso(),
+                "runtime.stage": "immersive_cuts_merged",
+                "immersive.cuts.merged_scenes": ",".join(str(s) for s in sorted(changed)),
+                "next.command": f'scripts/toc-immersive-ride-generate.sh --run-dir \"{run_dir}\"',
+            },
+        )
+
+    print("Merged scenes:", ",".join(str(s) for s in sorted(changed)))
+    print("Updated manifest:", manifest_path)
+    print("Next: please run:")
+    print(f'  scripts/toc-immersive-ride-generate.sh --run-dir "{run_dir}"')
+
+
+if __name__ == "__main__":
+    main()

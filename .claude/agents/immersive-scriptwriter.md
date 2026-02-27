@@ -117,9 +117,11 @@ model: inherit
   - これにより、英雄の旅/感情カーブを “カット列” で作りやすくする
 - 動画生成:
   - 各clipは **8秒**
-  - `scenes[].video_generation.tool` はユーザー指示に合わせて選ぶ（未指定なら `google_veo_3_1`）
-    - `google_veo_3_1`（Veo 3.1）
+  - `scenes[].video_generation.tool` はユーザー指示に合わせて選ぶ（未指定なら `kling_3_0`）
     - `kling_3_0`（Kling 3.0）
+    - `kling_3_0_omni`（Kling 3.0 Omni）
+    - `seedance`（BytePlus ModelArk / Seedance）
+    - `google_veo_3_1`（Veo 3.1。安全のためこのrepoでは無効化され、Klingにルーティング）
   - `video_generation.first_frame` と `video_generation.last_frame` を必ず入れる（**manifest順**の scene A → 次の scene B）
     - `scene_id` の **連番（+1）を前提にしない**
     - 後から中間sceneを差し込めるように `scene_id` は **10刻み**（例: 10,20,30...）を推奨

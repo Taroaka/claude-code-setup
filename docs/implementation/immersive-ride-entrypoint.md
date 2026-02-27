@@ -60,7 +60,8 @@ run root:
   - 参照画像（キャラクター/手/ボート）を **全scene** に適用
   - 16:9 / 2K（素材側）
 - 動画:
-  - provider は `video_manifest.md` の `scenes[].video_generation.tool` で選ぶ（default: `google_veo_3_1` / alt: `kling_3_0`）
+  - provider は `video_manifest.md` の `scenes[].video_generation.tool` で選ぶ（default: `kling_3_0` / alt: `seedance`）
+  - 注: Google Veo は安全のためこのリポジトリでは無効化している
   - first-last-frame-to-video
   - 8秒/clip
   - scene画像の **manifest順** をつないでclipを作る（scene_id の連番を前提にしない）
@@ -75,8 +76,8 @@ run root:
 
 ## コスト最適化（任意）
 
-- `GEMINI_VIDEO_MODEL` を fast/cheap 系に切り替える（例: `veo-3.1-fast-generate-preview`）
-  - Kling を使う場合は `KLING_VIDEO_MODEL` を運用で切り替える
+- Seedance を使う場合は `ARK_SEEDANCE_*_MODEL` を運用で切り替える
+- Kling を使う場合は `KLING_VIDEO_MODEL` / `KLING_OMNI_VIDEO_MODEL` を運用で切り替える
 
 ## state（追記）
 

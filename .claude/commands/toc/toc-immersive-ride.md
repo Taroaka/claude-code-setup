@@ -78,9 +78,11 @@ $ARGUMENTS:
 - `--experience ride_action_boat|cloud_island_walk` (optional, default: `ride_action_boat`)
   - `ride_action_boat`: 従来のテーマパーク・ライド（ボート/安全バー）パターン
   - `cloud_island_walk`: 雲上の島を歩いて理解を深める（哲学/概念の比喩）パターン
-- `--video-tool veo|kling` (optional, default: `veo`)
-  - `veo`: `video_manifest.md` の `scenes[].video_generation.tool` を `google_veo_3_1` にする
+- `--video-tool kling|kling-omni|seedance|veo` (optional, default: `kling-omni`)
   - `kling`: `video_manifest.md` の `scenes[].video_generation.tool` を `kling_3_0` にする
+  - `kling-omni`: `video_manifest.md` の `scenes[].video_generation.tool` を `kling_3_0_omni` にする
+  - `seedance`: `video_manifest.md` の `scenes[].video_generation.tool` を `seedance` にする
+  - `veo`: 安全のためこのrepoでは無効化（`kling_3_0_omni` に置換する）
 
 ## 実行手順（このコマンドが実行すること）
 

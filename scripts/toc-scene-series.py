@@ -431,9 +431,9 @@ def main() -> None:
     )
     parser.add_argument(
         "--video-tool",
-        choices=["kling", "kling-omni", "veo"],
+        choices=["kling", "kling-omni", "seedance", "veo"],
         default="kling-omni",
-        help='Video generation tool in manifests ("kling" uses kling_3_0, "kling-omni" uses kling_3_0_omni). "veo" is mapped to Kling for safety.',
+        help='Video generation tool in manifests ("kling"=kling_3_0, "kling-omni"=kling_3_0_omni, "seedance"=seedance). "veo" is mapped to Kling for safety.',
     )
 
     args = parser.parse_args()
@@ -448,6 +448,8 @@ def main() -> None:
         video_tool = "kling_3_0"
     elif args.video_tool == "kling-omni":
         video_tool = "kling_3_0_omni"
+    elif args.video_tool == "seedance":
+        video_tool = "seedance"
     else:
         print('[warn] --video-tool veo is disabled for safety; using kling_3_0_omni instead.')
         video_tool = "kling_3_0_omni"

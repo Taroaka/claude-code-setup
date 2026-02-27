@@ -3,7 +3,7 @@
 Generate assets (image/video/audio) from a `video_manifest.md`.
 
 - Image: Google Gemini Image (Nano Banana Pro = gemini-3-pro-image-preview)
-- Video: Kling (kling_3_0 / kling_3_0_omni). Any Veo tool names are treated as Kling for safety.
+- Video: Kling (kling_3_0 / kling_3_0_omni) or BytePlus ModelArk Seedance. Any Veo tool names are treated as Kling for safety.
 
 Audio (TTS):
 - ElevenLabs Text-to-Speech API
@@ -38,6 +38,7 @@ from toc.providers.elevenlabs import DEFAULT_ELEVENLABS_VOICE_ID, ElevenLabsClie
 from toc.providers.evolink import EvoLinkClient, EvoLinkConfig
 from toc.providers.gemini import GeminiClient, GeminiConfig
 from toc.providers.kling import KlingClient, KlingConfig
+from toc.providers.seedance import SeedanceClient, SeedanceConfig
 from toc.providers.seadream import SeaDreamClient, SeaDreamConfig
 
 
@@ -1673,6 +1674,72 @@ def generate_evolink_video(
         raise SystemExit(str(e)) from e
 
 
+def generate_seedance_video(
+    *,
+    client: SeedanceClient | None,
+    model: str,
+    prompt: str,
+    duration_seconds: int,
+    aspect_ratio: str,
+    resolution: str,
+    input_image: Path | None,
+    last_frame_image: Path | None,
+    reference_images: list[Path] | None,
+    generate_audio: bool,
+    extra_payload: dict[str, Any] | None,
+    out_path: Path,
+    poll_every: float,
+    timeout_seconds: float,
+    force: bool,
+    log_path: Path | None,
+    dry_run: bool,
+) -> None:
+    if out_path.exists() and not force:
+        return
+
+    if dry_run:
+        kind = "F2F" if (input_image and last_frame_image) else ("I2V" if input_image else "T2V")
+        print(f"[dry-run] VIDEO({kind}) {out_path} <- {model} ({duration_seconds}s, {aspect_ratio}, {resolution})")
+        return
+
+    if client is None:
+        raise SystemExit("Seedance client not configured (missing ARK_API_KEY or SEADREAM_API_KEY).")
+
+    payload = client.build_video_payload(
+        model=model,
+        prompt=prompt,
+        duration_seconds=int(duration_seconds),
+        ratio=aspect_ratio,
+        resolution=resolution,
+        input_image=input_image,
+        last_frame_image=last_frame_image,
+        reference_images=reference_images,
+        generate_audio=bool(generate_audio),
+        watermark=False,
+        extra_payload=extra_payload,
+    )
+
+    try:
+        submit = client.create_task(payload=payload)
+        task_id = client.extract_task_id(submit)
+        task = client.poll_task(task_id=task_id, poll_every_seconds=float(poll_every), timeout_seconds=float(timeout_seconds))
+    except (HttpError, TimeoutError, ValueError) as e:
+        raise SystemExit(str(e)) from e
+
+    if log_path:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        log_path.write_text(json.dumps({"submit": submit, "task": task}, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    if client.is_failed_task(task):
+        raise SystemExit(f"Seedance task failed: {json.dumps(task, ensure_ascii=False)}")
+
+    try:
+        video_url = client.extract_video_url(task)
+        client.download_to_file(url=video_url, out_path=out_path)
+    except (HttpError, ValueError) as e:
+        raise SystemExit(str(e)) from e
+
+
 def normalize_tool_name(tool: str | None) -> str:
     if not tool:
         return ""
@@ -1850,6 +1917,39 @@ def main() -> None:
     parser.add_argument("--evolink-kling-o3-i2v-model", default=_env("EVOLINK_KLING_O3_I2V_MODEL", "kling-v3-image-to-video"))
     parser.add_argument("--evolink-kling-o3-t2v-model", default=_env("EVOLINK_KLING_O3_T2V_MODEL", "kling-o3-text-to-video"))
 
+    # BytePlus ModelArk (Seedance video generation)
+    parser.add_argument(
+        "--ark-api-base",
+        default=_env("ARK_API_BASE") or _env("SEADREAM_API_BASE", "https://ark.ap-southeast.bytepluses.com/api/v3"),
+        help="ModelArk API base (default: ARK_API_BASE, fallback: SEADREAM_API_BASE).",
+    )
+    parser.add_argument(
+        "--ark-api-key",
+        default=_env("ARK_API_KEY") or _env("SEADREAM_API_KEY"),
+        help="ModelArk API key (default: ARK_API_KEY, fallback: SEADREAM_API_KEY).",
+    )
+    parser.add_argument(
+        "--ark-seedance-i2v-model",
+        default=_env("ARK_SEEDANCE_I2V_MODEL") or _env("SEEDANCE_I2V_MODEL", "seedance-1-0-lite-i2v-250428"),
+        help="Seedance model ID for image-to-video.",
+    )
+    parser.add_argument(
+        "--ark-seedance-t2v-model",
+        default=_env("ARK_SEEDANCE_T2V_MODEL") or _env("SEEDANCE_T2V_MODEL", "seedance-1-0-pro-250528"),
+        help="Seedance model ID for text-to-video.",
+    )
+    parser.add_argument(
+        "--ark-generate-audio",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Enable Seedance generate_audio (default: disabled).",
+    )
+    parser.add_argument(
+        "--ark-extra-json",
+        default=_env("ARK_EXTRA_JSON", None),
+        help="Optional JSON object merged into Seedance request payload.",
+    )
+
     # logging
     parser.add_argument("--log-dir", default=None, help="Directory to write provider logs (default: <base>/logs/providers).")
 
@@ -1880,6 +1980,7 @@ def main() -> None:
 
     kling_extra_payload = _parse_optional_json_object(args.kling_extra_json, flag_name="--kling-extra-json")
     kling_omni_extra_payload = _parse_optional_json_object(args.kling_omni_extra_json, flag_name="--kling-omni-extra-json")
+    ark_extra_payload = _parse_optional_json_object(args.ark_extra_json, flag_name="--ark-extra-json")
 
     manifest_path = Path(args.manifest)
     if not manifest_path.exists():
@@ -2019,6 +2120,24 @@ def main() -> None:
             for scene in scenes
         )
     )
+    needs_seedance_video = (
+        not args.skip_videos
+        and any(
+            normalize_tool_name(scene.video_tool)
+            in {
+                "seedance",
+                "byteplus_seedance",
+                "bytedance_seedance",
+                "ark_seedance",
+                "seadream_video",
+                "seedream_video",
+                "see_dream",
+            }
+            and scene.video_output
+            and (scene_filter is None or scene.scene_id in scene_filter)
+            for scene in scenes
+        )
+    )
 
     gemini_client: GeminiClient | None = None
     if not args.dry_run and (needs_gemini_image or needs_gemini_video):
@@ -2057,6 +2176,17 @@ def main() -> None:
                 secret_key=args.kling_secret_key,
                 api_base=args.kling_api_base,
                 video_model=args.kling_video_model,
+            )
+        )
+
+    seedance_client: SeedanceClient | None = None
+    if not args.dry_run and needs_seedance_video:
+        if not args.ark_api_key:
+            raise SystemExit("Missing ARK_API_KEY (required for Seedance video generation).")
+        seedance_client = SeedanceClient(
+            SeedanceConfig.from_env(
+                api_key=args.ark_api_key,
+                api_base=args.ark_api_base,
             )
         )
 
@@ -2542,6 +2672,35 @@ def main() -> None:
                     log_path=log_dir / f"scene{scene.scene_id}_video.json",
                     dry_run=args.dry_run,
                 )
+        elif tool in {
+            "seedance",
+            "byteplus_seedance",
+            "bytedance_seedance",
+            "ark_seedance",
+            "seadream_video",
+            "seedream_video",
+            "see_dream",
+        }:
+            seedance_model = str(args.ark_seedance_i2v_model if input_image is not None else args.ark_seedance_t2v_model)
+            generate_seedance_video(
+                client=seedance_client,
+                model=seedance_model,
+                prompt=prompt,
+                duration_seconds=int(dur),
+                aspect_ratio=aspect_ratio,
+                resolution=args.video_resolution,
+                input_image=input_image,
+                last_frame_image=last_image,
+                reference_images=video_ref_paths,
+                generate_audio=bool(args.ark_generate_audio),
+                extra_payload=ark_extra_payload,
+                out_path=out_path,
+                poll_every=args.poll_every,
+                timeout_seconds=args.timeout_seconds,
+                force=args.force,
+                log_path=log_dir / f"scene{scene.scene_id}_video.json",
+                dry_run=args.dry_run,
+            )
         else:
             raise SystemExit(f"scene{scene.scene_id}: unsupported video tool: {scene.video_tool}")
 

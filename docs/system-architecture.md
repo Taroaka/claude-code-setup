@@ -19,7 +19,7 @@ future cloud deployment. It corresponds to todo item 1 in `todo.txt`.
 | Storage | Filesystem object store + PostgreSQL metadata DB | Durable metadata |
 | Job queue | In-process async queue | Simple and sufficient for MVP |
 | State management | Append-only `state.txt` in project folder (no DB checkpoints) | Human-readable recovery |
-| Providers | LLM via LangChain; image=Google Nano Banana Pro; video=Veo 3.1 (default) or Kling 3.0; TTS=ElevenLabs | Avoid vendor lock-in |
+| Providers | LLM via LangChain; image=Google Nano Banana Pro; video=Kling 3.0 (default) / Seedance (alt); TTS=ElevenLabs（Veo is disabled for safety） | Avoid vendor lock-in |
 | API boundary | Claude Code entrypoint (slash command) | Keep surface area small |
 
 ## Component diagram
@@ -94,7 +94,8 @@ graph TD
 - Image: Google Nano Banana Pro（Gemini Image / `gemini-3-pro-image-preview`）
 - Video: Kling 3.0（default。`video_generation.tool: kling_3_0`）
 - Video (omni): Kling 3.0 Omni（`video_generation.tool: kling_3_0_omni`）
-- Video (alt): Google Veo 3.1（`video_generation.tool: google_veo_3_1`）
+- Video (alt): Seedance（BytePlus ModelArk。`video_generation.tool: seedance`）
+- Note: Google Veo は安全のためこのリポジトリでは無効化している。
 - TTS: ElevenLabs
 - Swap providers via configuration without changing orchestration logic.
 

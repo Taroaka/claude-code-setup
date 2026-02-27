@@ -119,9 +119,10 @@ scenes:
       iterations: 4
       selected: null
     video_generation:
-      # tool: "google_veo_3_1"
+      # tool: "google_veo_3_1"  # disabled; routed to Kling for safety
       # tool: "kling_3_0"
       # tool: "kling_3_0_omni"
+      # tool: "seedance"       # BytePlus ModelArk Seedance (video; see ARK_* env)
       tool: "kling_3_0"
       duration_seconds: 8
       first_frame: "assets/scenes/scene10.png"
@@ -170,9 +171,10 @@ scenes:
       iterations: 4
       selected: null
     video_generation:
-      # tool: "google_veo_3_1"
+      # tool: "google_veo_3_1"  # disabled; routed to Kling for safety
       # tool: "kling_3_0"
       # tool: "kling_3_0_omni"
+      # tool: "seedance"       # BytePlus ModelArk Seedance (video; see ARK_* env)
       tool: "kling_3_0"
       duration_seconds: 8
       first_frame: "assets/scenes/scene20.png"

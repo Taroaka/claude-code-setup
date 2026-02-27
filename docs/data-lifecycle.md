@@ -56,9 +56,9 @@ lineage_record:
   input_refs:
     - "output/<topic>_<timestamp>/story.md"
   provider:
-    name: "google_veo_3_1"
-    model: "veo-3.1-generate-preview"
-    version: "preview"
+    name: "seedance"
+    model: "seedance-1-0-pro-250528"
+    version: "2024-01-01"
   params:
     seed: 1234
     prompt: "string"

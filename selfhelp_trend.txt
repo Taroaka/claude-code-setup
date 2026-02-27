@@ -1,0 +1,227 @@
+# 自己啓発系ネタ収集サマリー（neta-collector: selfhelp-trend-researcher）
+
+作成日: 2026-02-22
+モード: slate（候補収集）
+対象: global
+目的: 「物語系」ではなく、自己啓発/習慣/キャリア/起業領域の動画ネタ候補を収集する
+
+## deep researchステータス運用
+- `[ ]` 未着手（deep research未完了）
+- `[x]` 完了（deep research完了）
+
+## 候補一覧（30件）
+
+- [ ] 1. James Clear
+- one_liner: 習慣形成（Atomic Habits）で世界的に参照される行動変容の実践家。
+- where_to_find: 公式ニュースレター / 書籍 / 講演・インタビュー
+- core_claims: 小さな習慣の積み上げ / アイデンティティベース習慣 / 環境設計
+- critiques: 再現性の個人差 / 社会構造要因を過小評価しがち
+- verification_note: 発言の初出（書籍・講演）を確認する。
+
+- [ ] 2. Mel Robbins
+- one_liner: 行動開始の心理ハードルを下げる実践フレームで人気。
+- where_to_find: Podcast / 書籍 / YouTube
+- core_claims: 5秒ルール / 自己効力感の回復 / 思考より先に行動
+- critiques: 単純化しすぎるとの批判 / 文脈依存性
+- verification_note: 代表主張の一次ソースを確認する。
+
+- [ ] 3. Jay Shetty
+- one_liner: マインドセットと人間関係テーマを大衆向けに発信するMC・著者。
+- where_to_find: On Purpose Podcast / 書籍 / SNS
+- core_claims: 価値観に沿う選択 / 内省習慣 / 関係性の質改善
+- critiques: 引用・ストーリー出典に関する検証論点
+- verification_note: 引用元・エピソードの原典確認が必要。
+
+- [ ] 4. Simon Sinek
+- one_liner: 「Why」起点のリーダーシップ論で組織文脈に強い。
+- where_to_find: TED / 書籍 / 講演
+- core_claims: Start With Why / 信頼の輪 / 長期思考の組織運営
+- critiques: 理想論寄り / 現場実装の難しさ
+- verification_note: 講演と書籍での定義差分を確認。
+
+- [ ] 5. Tim Ferriss
+- one_liner: 生産性・学習法・高業績者インタビューで影響力を持つ。
+- where_to_find: The Tim Ferriss Show / 書籍 / ブログ
+- core_claims: 実験的自己改善 / 80-20思考 / ライフデザイン
+- critiques: 一部手法の一般化限界 / 文脈の切り出し問題
+- verification_note: 実験条件と対象の妥当性を確認。
+
+- [ ] 6. Ali Abdaal
+- one_liner: 勉強法と生産性を分かりやすく伝えるクリエイター型発信者。
+- where_to_find: YouTube / Podcast / 書籍
+- core_claims: システム化 / 楽しさ駆動の継続 / 発信を通じた学習
+- critiques: クリエイター職前提という批判
+- verification_note: 方法論の適用範囲を明記する。
+
+- [ ] 7. Cal Newport
+- one_liner: 集中・デジタルミニマリズム領域で支持される研究者。
+- where_to_find: 書籍 / Podcast / 記事
+- core_claims: Deep Work / 注意資源の保護 / 職人的成長
+- critiques: 現代職場での実装困難性
+- verification_note: 用語定義を一次文献で確認。
+
+- [ ] 8. Andrew Huberman
+- one_liner: 神経科学ベースの習慣・健康改善情報を発信。
+- where_to_find: Huberman Lab Podcast / YouTube
+- core_claims: 睡眠最適化 / 光曝露 / 行動と生理のリンク
+- critiques: エビデンス強度への議論 / 一般化リスク
+- verification_note: 研究論文レベルで根拠を再確認する。
+
+- [ ] 9. Brené Brown
+- one_liner: vulnerability（弱さの開示）を軸にしたリーダーシップ論で著名。
+- where_to_find: TED / 書籍 / Podcast
+- core_claims: 勇気ある対話 / shame resilience / 信頼醸成
+- critiques: 実務での測定可能性の課題
+- verification_note: 研究と実践論の境界を確認。
+
+- [ ] 10. Adam Grant
+- one_liner: 組織心理学を一般向けに翻訳する人気著者。
+- where_to_find: Think Again / Podcast / 書籍
+- core_claims: 再考力 / ギバー戦略 / 学習する組織
+- critiques: 実験知見の現場転用難易度
+- verification_note: 研究条件と外的妥当性を確認。
+
+- [ ] 11. Robin Sharma
+- one_liner: 朝習慣とリーダーシップ文脈で長期的に読まれる自己啓発著者。
+- where_to_find: 書籍 / 講演 / Newsletter
+- core_claims: 朝のルーティン / 自己規律 / 長期成長
+- critiques: 手法の画一化への批判
+- verification_note: 具体手法の再現条件を確認。
+
+- [ ] 12. Gary Vaynerchuk
+- one_liner: 起業・SNS運用・実行主義で支持を集める。
+- where_to_find: Podcast / YouTube / SNS
+- core_claims: 発信量 / 市場適応 / 行動速度
+- critiques: 過労・過活動を助長する懸念
+- verification_note: 文脈別の推奨条件を確認。
+
+- [ ] 13. Marie Forleo
+- one_liner: クリエイター/起業家向け自己効力感テーマで人気。
+- where_to_find: MarieTV / 書籍 / コース
+- core_claims: Mindset first / small wins / 実行の継続
+- critiques: 商材依存の再現性問題
+- verification_note: 無償コンテンツと有償教材の差分確認。
+
+- [ ] 14. Lewis Howes
+- one_liner: インタビュー型で成功者習慣を集約する発信者。
+- where_to_find: The School of Greatness / 書籍
+- core_claims: 成功習慣 / メンタル回復 / 人間関係
+- critiques: ゲスト依存で一貫性が弱い点
+- verification_note: 主張の出所（本人/ゲスト）を分離確認。
+
+- [ ] 15. Brendon Burchard
+- one_liner: ハイパフォーマンス習慣を体系化して発信。
+- where_to_find: Podcast / 書籍 / 講座
+- core_claims: 意図的習慣 / エネルギー管理 / 明確な目標
+- critiques: 高負荷設計で継続難の指摘
+- verification_note: 継続率に関する根拠確認。
+
+- [ ] 16. Nir Eyal
+- one_liner: 行動設計と注意制御の両面を扱う著者。
+- where_to_find: 書籍 / 記事 / 講演
+- core_claims: Hook model / Indistractable / トリガー管理
+- critiques: 行動デザインの倫理論点
+- verification_note: 倫理的配慮の記述を確認。
+
+- [ ] 17. Naval Ravikant
+- one_liner: 富・幸福・レバレッジ思考で支持される投資家発信。
+- where_to_find: Podcast出演 / SNS / 名言集アーカイブ
+- core_claims: Leverage / Judgment / 具体より原則
+- critiques: 抽象度が高く実装困難との批判
+- verification_note: 原発言ソース（インタビュー）確認必須。
+
+- [ ] 18. Sahil Bloom
+- one_liner: キャリアと人生設計を統合した実践的フレームを発信。
+- where_to_find: Newsletter / SNS / Podcast
+- core_claims: 5 types of wealth / 長期設計 / 思考の言語化
+- critiques: 既存概念の再編集との指摘
+- verification_note: フレームのオリジナル性を確認。
+
+- [ ] 19. Ryan Holiday
+- one_liner: ストア哲学を現代の意思決定に接続する著者。
+- where_to_find: Daily Stoic / 書籍 / Podcast
+- core_claims: 障害は道 / 自制 / 日々の実践
+- critiques: 哲学の簡略化への批判
+- verification_note: 古典原典との対応を確認。
+
+- [ ] 20. Mark Manson
+- one_liner: 逆説的メッセージで自己啓発を再定義する著者。
+- where_to_find: 書籍 / 記事 / Podcast
+- core_claims: 価値選択 / 限界受容 / 誠実な自己認識
+- critiques: 挑発的文体の賛否
+- verification_note: 文脈切り取り誤読を避ける。
+
+- [ ] 21. Jen Sincero
+- one_liner: 自己肯定と行動転換をポップに伝える作家。
+- where_to_find: 書籍 / 講演
+- core_claims: 自己信頼 / 思考転換 / 行動習慣
+- critiques: 根拠の弱さを指摘される場合がある
+- verification_note: 主張を一般論として扱う。
+
+- [ ] 22. Vishen Lakhiani
+- one_liner: 学習・意識変容をテーマにコミュニティ型で展開。
+- where_to_find: Mindvalley / Podcast / 書籍
+- core_claims: 変容学習 / コミュニティ / 体験設計
+- critiques: 科学的妥当性への議論
+- verification_note: 科学主張は査読論文で裏取り。
+
+- [ ] 23. Steven Bartlett
+- one_liner: 起業家視点で成功・メンタルを掘るインタビュアー。
+- where_to_find: Diary of a CEO / 書籍 / SNS
+- core_claims: 創業者心理 / 継続力 / 失敗の再解釈
+- critiques: ゲスト発言の検証不足リスク
+- verification_note: センセーショナル主張は再検証。
+
+- [ ] 24. Rich Roll
+- one_liner: 健康習慣・持久系ライフスタイルの実践発信者。
+- where_to_find: Rich Roll Podcast / 書籍
+- core_claims: 一貫習慣 / 長期健康 / 自己更新
+- critiques: 生活条件による実行難易度差
+- verification_note: 医療・栄養は専門監修前提で扱う。
+
+- [ ] 25. Tom Bilyeu
+- one_liner: 成長志向と起業マインドを掛け合わせて発信。
+- where_to_find: Impact Theory / YouTube / Podcast
+- core_claims: Mindset engineering / 行動規律 / 学習速度
+- critiques: モチベーション依存の危険
+- verification_note: 実証と体験談を区別する。
+
+- [ ] 26. Darius Foroux
+- one_liner: 習慣・思考整理・キャリア戦略を実務寄りに発信する著者。
+- where_to_find: Newsletter / 書籍 / 記事
+- core_claims: シンプル習慣 / 集中設計 / 長期キャリア思考
+- critiques: 海外文脈前提で日本市場への移植に調整が必要
+- verification_note: 記事初出と書籍版の差分を確認。
+
+- [ ] 27. 本田健（日本語圏）
+- one_liner: お金と生き方を平易に語る日本語圏自己啓発著者。
+- where_to_find: 書籍 / 講演 / 公式メディア
+- core_claims: 価値観ベースの働き方 / お金観 / 人間関係
+- critiques: 一般化可能性の議論
+- verification_note: 発言の最新版を優先確認。
+
+- [ ] 28. 中田敦彦（学習啓発系文脈）
+- one_liner: 学習動機づけコンテンツで自己啓発層にも影響を持つ。
+- where_to_find: YouTube / 書籍 / 講演
+- core_claims: 学びの再編集 / 知識の入口化 / 行動喚起
+- critiques: 要約偏重の限界
+- verification_note: 原典参照導線の有無を確認。
+
+- [ ] 29. DaiGo（メンタリスト）
+- one_liner: 心理学ベースの自己改善情報を広く発信。
+- where_to_find: YouTube / 書籍 / 有料配信
+- core_claims: 行動心理 / 習慣化 / 認知改善
+- critiques: 過去発言や論争点の検証が必要
+- verification_note: 批判論点を断定せず一次情報で確認。
+
+- [ ] 30. 樺沢紫苑
+- one_liner: メンタルヘルス×アウトプット習慣の実践を提案する精神科医。
+- where_to_find: 書籍 / YouTube / 講演
+- core_claims: 睡眠・運動・朝散歩 / アウトプット前提学習 / 継続習慣
+- critiques: 個人差や医療適用範囲の問題
+- verification_note: 医療助言に見える表現は避け監修前提で扱う。
+
+## next step
+- 上位5名を選び、`deep_dive`（60秒紹介骨格）に落とし込む。
+- 各候補に対して一次ソースURLを3件以上付与する。
+- 論争点がある人物は「主張」と「検証中」を分離して表記する。

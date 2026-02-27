@@ -27,10 +27,11 @@
 - 曖昧な場合のみ、足りないカテゴリを 1問で確認する
 
 ### Video model note
-- ユーザーが `veo` / `kling` を指定した場合は、playbook選択に加えて `video_manifest.md` の
+- ユーザーが `veo` / `kling` / `seedance` を指定した場合は、playbook選択に加えて `video_manifest.md` の
   `scenes[].video_generation.tool` も一致させる
-  - `veo` → `google_veo_3_1`
   - `kling` → `kling_3_0`
+  - `seedance` → `seedance`
+  - `veo` → `kling_3_0_omni`（安全のためこのrepoではVeoを無効化している）
 
 ## Output format
 - 選択結果を5行で返す:

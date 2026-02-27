@@ -265,9 +265,9 @@ def main() -> None:
     )
     parser.add_argument(
         "--video-tool",
-        choices=["kling", "kling-omni", "veo"],
+        choices=["kling", "kling-omni", "seedance", "veo"],
         default="kling-omni",
-        help='Video generation tool in manifest ("kling" uses kling_3_0, "kling-omni" uses kling_3_0_omni). "veo" is mapped to Kling for safety.',
+        help='Video generation tool in manifest ("kling"=kling_3_0, "kling-omni"=kling_3_0_omni, "seedance"=seedance). "veo" is mapped to Kling for safety.',
     )
 
     # Prompt overrides applied at API-call time (not baked into manifest).
@@ -332,6 +332,8 @@ def main() -> None:
         must_env("GEMINI_API_KEY")
     if args.video_tool in {"kling", "kling-omni"}:
         must_kling_credentials()
+    if args.video_tool == "seedance":
+        must_env("ARK_API_KEY")
     voice_id = ""
     if not args.skip_audio:
         must_env("ELEVENLABS_API_KEY")
@@ -377,7 +379,7 @@ def main() -> None:
         video_tool=(
             "kling_3_0"
             if args.video_tool == "kling"
-            else "kling_3_0_omni"
+            else ("seedance" if args.video_tool == "seedance" else "kling_3_0_omni")
         ),
         out_path=manifest_path,
     )

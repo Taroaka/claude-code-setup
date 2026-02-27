@@ -6,7 +6,8 @@
 - image: Google Nano Banana Pro（Gemini Image / `gemini-3-pro-image-preview`）
 - video: Kling 3.0（default。`video_generation.tool: kling_3_0`）
 - video (omni): Kling 3.0 Omni（`video_generation.tool: kling_3_0_omni`）
-- video (alt): Google Veo 3.1（`video_generation.tool: google_veo_3_1`）
+- video (alt): Seedance（BytePlus ModelArk。`video_generation.tool: seedance`）
+- note: Google Veo は安全のためこのリポジトリでは無効化している
 - TTS: ElevenLabs（voice/model/output_format は運用で確定）
 - LLM provider is LangChain (API-based)
 - 候補整理/調査リスト: `docs/video-production-research.md`

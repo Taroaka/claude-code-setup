@@ -12,7 +12,7 @@
 
 - `kling_3_0`: Kling 3.0（デフォルト）
 - `kling_3_0_omni`: Kling 3.0 Omni（モデル名と extra JSON を切替）
-- `google_veo_3_1`: Veo（代替）
+- `google_veo_3_1`: Veo（このrepoでは無効化のため Kling にルーティング）
 
 ## env（最低限）
 

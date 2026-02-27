@@ -1,0 +1,219 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import re
+import subprocess
+from pathlib import Path
+
+try:
+    import yaml  # type: ignore[import-not-found]
+except ModuleNotFoundError:  # pragma: no cover
+    yaml = None
+
+
+def now_iso() -> str:
+    return dt.datetime.now().astimezone().isoformat(timespec="seconds")
+
+
+def extract_yaml_block(text: str) -> str:
+    m = re.search(r"```yaml\s*\n(.*?)\n```", text, flags=re.DOTALL)
+    if not m:
+        raise SystemExit("No ```yaml ... ``` block found in manifest markdown.")
+    return m.group(1)
+
+
+def append_state_block(state_path: Path, kv: dict[str, str]) -> None:
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    lines = [f"{k}={v}" for k, v in kv.items()]
+    block = "\n".join(lines) + "\n---\n"
+    if state_path.exists():
+        state_path.write_text(state_path.read_text(encoding="utf-8") + block, encoding="utf-8")
+        return
+    state_path.write_text(block, encoding="utf-8")
+
+
+def tmux_send(target: str, message: str) -> None:
+    subprocess.run(["tmux", "send-keys", "-t", target, message], check=True)
+    subprocess.run(["tmux", "send-keys", "-t", target, "Enter"], check=True)
+
+
+def _parse_scene_ids(scene_ids_csv: str | None) -> list[int] | None:
+    if not scene_ids_csv:
+        return None
+    out: list[int] = []
+    for raw in scene_ids_csv.split(","):
+        s = raw.strip()
+        if not s:
+            continue
+        out.append(int(s))
+    return out or None
+
+
+def _load_manifest_scenes(manifest_path: Path) -> list[int]:
+    if yaml is None:
+        raise SystemExit("PyYAML is required. Install with: pip install pyyaml")
+    md = manifest_path.read_text(encoding="utf-8")
+    y = extract_yaml_block(md)
+    data = yaml.safe_load(y)
+    if not isinstance(data, dict):
+        raise SystemExit("Manifest YAML must be a mapping at the root.")
+    raw_scenes = data.get("scenes") or []
+    if not isinstance(raw_scenes, list):
+        raise SystemExit("Manifest YAML scenes must be a list.")
+
+    ids: list[int] = []
+    for s in raw_scenes:
+        if not isinstance(s, dict):
+            continue
+        try:
+            scene_id = int(s.get("scene_id"))
+        except Exception:
+            continue
+        ids.append(scene_id)
+    return ids
+
+
+def _default_cut_skeleton(scene_id: int, cut_id: int) -> dict:
+    return {
+        "cut_id": int(cut_id),
+        "image_generation": {
+            "tool": "google_nanobanana_pro",
+            "character_ids": [],
+            "object_ids": [],
+            "prompt": (
+                "[TODO]\n"
+                f"Scene {scene_id} / Cut {cut_id}: write a concrete cinematic prompt.\n"
+                "- First-person POV (immersive ride) continuity.\n"
+                "- Specify purpose, location, action, composition, camera.\n"
+                "- No text, no watermark.\n"
+            ),
+            "output": f"assets/scenes/scene{scene_id:02d}_cut{cut_id:02d}.png",
+            "aspect_ratio": "16:9",
+            "image_size": "2K",
+            "references": [],
+        },
+    }
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Prepare per-scene scratch files for immersive ride cuts (multi-agent safe).")
+    parser.add_argument("--run-dir", required=True, help="Existing immersive run dir (contains video_manifest.md).")
+    parser.add_argument("--scene-ids", default=None, help='Comma-separated scene ids to prepare (default: auto from manifest).')
+    parser.add_argument("--start-scene-id", type=int, default=2, help="Prepare scenes with id >= this (default: 2).")
+    parser.add_argument("--min-cuts", type=int, default=3)
+    parser.add_argument("--max-cuts", type=int, default=5)
+    parser.add_argument("--write-command", action="store_true", help="Write queue/shogun_to_karo.yaml command entry.")
+    parser.add_argument("--wake-karo", action="store_true", help="tmux send-keys to wake karo after writing command.")
+    args = parser.parse_args()
+
+    run_dir = Path(args.run_dir).resolve()
+    manifest_path = run_dir / "video_manifest.md"
+    if not manifest_path.exists():
+        raise SystemExit(f"Manifest not found: {manifest_path}")
+
+    requested = _parse_scene_ids(args.scene_ids)
+    scene_ids = requested if requested is not None else _load_manifest_scenes(manifest_path)
+
+    # Exclude character reference scenes and early scenes; keep stable, small surface area.
+    excluded = {0, 100, 101}
+    targets = sorted({sid for sid in scene_ids if sid not in excluded and int(sid) >= int(args.start_scene_id) and int(sid) < 100})
+    if not targets:
+        raise SystemExit("No target scenes found. Check --scene-ids / --start-scene-id.")
+
+    scratch_dir = run_dir / "scratch" / "cuts"
+    scratch_dir.mkdir(parents=True, exist_ok=True)
+
+    for sid in targets:
+        p = scratch_dir / f"scene{sid:02d}.yaml"
+        if p.exists():
+            continue
+        skeleton = {
+            "scene_id": int(sid),
+            "cuts": [_default_cut_skeleton(int(sid), int(cut_id)) for cut_id in range(1, int(args.min_cuts) + 1)],
+        }
+        if yaml is None:
+            # Minimal YAML without PyYAML (fallback). Keep it human-editable.
+            lines: list[str] = []
+            lines.append(f"scene_id: {sid}")
+            lines.append("cuts:")
+            for cut_id in range(1, int(args.min_cuts) + 1):
+                out = f"assets/scenes/scene{sid:02d}_cut{cut_id:02d}.png"
+                lines.extend(
+                    [
+                        f"  - cut_id: {cut_id}",
+                        "    image_generation:",
+                        "      tool: google_nanobanana_pro",
+                        "      character_ids: []",
+                        "      object_ids: []",
+                        "      prompt: |",
+                        f"        [TODO] Scene {sid} / Cut {cut_id}: write a concrete cinematic prompt.",
+                        "        - First-person POV (immersive ride) continuity.",
+                        "        - Specify purpose, location, action, composition, camera.",
+                        "        - No text, no watermark.",
+                        f"      output: {out}",
+                        "      aspect_ratio: '16:9'",
+                        "      image_size: 2K",
+                        "      references: []",
+                    ]
+                )
+            p.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        else:
+            p.write_text(yaml.safe_dump(skeleton, sort_keys=False, allow_unicode=True), encoding="utf-8")
+
+    state_path = run_dir / "state.txt"
+    if state_path.exists():
+        append_state_block(
+            state_path,
+            {
+                "timestamp": now_iso(),
+                "runtime.stage": "immersive_cuts_prepare",
+                "immersive.cuts.scratch_dir": str(scratch_dir),
+                "immersive.cuts.targets": ",".join(str(s) for s in targets),
+                "immersive.cuts.min": str(args.min_cuts),
+                "immersive.cuts.max": str(args.max_cuts),
+            },
+        )
+
+    if args.write_command:
+        repo_root = Path.cwd().resolve()
+        queue_dir = repo_root / "queue"
+        if not queue_dir.exists():
+            raise SystemExit(f"queue/ not found at {queue_dir}. Run scripts/ai/multiagent.sh first (it creates/symlinks queue/).")
+
+        cmd_id = f"toc_immersive_cuts_{dt.datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        playbook = (repo_root / "workflow/multiagent-immersive-cuts-playbook.md").resolve()
+        yaml_lines = [
+            "queue:",
+            f"  - id: {cmd_id}",
+            f'    timestamp: "{now_iso()}"',
+            '    command: "ToC immersive cuts multiagent: Each agent owns one scene scratch/cuts/sceneXX.yaml (3-5 cuts). Single-writer runs merge script to update video_manifest.md, then user runs immersive generate script."',
+            "    project: toc",
+            "    priority: high",
+            "    status: pending",
+            "    params:",
+            f'      run_dir: "{str(run_dir)}"',
+            f'      manifest: "{str(manifest_path)}"',
+            f'      scratch_dir: "{str(scratch_dir)}"',
+            f'      targets: "{",".join(str(s) for s in targets)}"',
+            f'      playbook: "{str(playbook)}"',
+            "",
+        ]
+        (queue_dir / "shogun_to_karo.yaml").write_text("\n".join(yaml_lines), encoding="utf-8")
+
+        if args.wake_karo:
+            if subprocess.run(["tmux", "has-session", "-t", "multiagent"], check=False).returncode != 0:
+                raise SystemExit("tmux session 'multiagent' not found. Start multi-agent first.")
+            tmux_send("multiagent:0.0", "queue/shogun_to_karo.yaml に新しい指示がある。確認して実行せよ。")
+
+    print(f"Run dir: {run_dir}")
+    print(f"Prepared scratch: {scratch_dir}")
+    print("Targets:", ",".join(str(s) for s in targets))
+    print("Next (parallel): edit scratch/cuts/sceneXX.yaml per scene.")
+    print("Next (single-writer):")
+    print(f'  python scripts/ai/merge-immersive-cuts.py --run-dir "{run_dir}"')
+
+
+if __name__ == "__main__":
+    main()
