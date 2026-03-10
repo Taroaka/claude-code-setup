@@ -50,7 +50,11 @@ scene_plan:
         from_prev: "string"
         to_next: "string"
 
-# === 2) Hero-story validation（必須） ===
+# === 2) Structure / framework notes（任意・参考） ===
+#
+# 注意:
+# - Hero's Journey（英雄の旅）への当てはめは「公式チェック」ではなく、見落とし防止の道具に留める。
+# - fit が low でも失格ではない（物語価値は登場人物/世界観の多様性と、選択で作る）。
 hero_story_validation:
   hero_journey_fit:
     fit: "high|medium|low"
@@ -107,6 +111,35 @@ variants:
     impact_on_story: "string"
     scene_ids: [1]
     sources: ["string"]
+
+# === 5.5) Conflicts & selection cues（推奨） ===
+#
+# 目的:
+# - 複数文献で矛盾がある場合に、後段（director/scriptwriter）が「選択」できる材料を残す。
+# - 矛盾する要素の“ハイブリッド（混成）”は高得点になり得る一方で破綻リスクが高い。
+#   混成を単一シーン/設定として確定させる場合は、人間承認が必要（運用）。
+conflicts:
+  - conflict_id: "C1"
+    topic: "string"
+    accounts:
+      - account_id: "A"
+        claim: "string"
+        sources: ["S1"]
+        confidence: 0.0
+      - account_id: "B"
+        claim: "string"
+        sources: ["S2"]
+        confidence: 0.0
+    impact_on_story: "string"
+    selection_notes:
+      recommended_choice: "A|B|both_separated|hybrid_requires_approval"
+      rationale: "string"
+    hybrid_proposal:
+      proposed: false
+      mix_elements: ["string"]
+      expected_score_gain: "string"
+      risks: ["string"]
+      mitigations: ["string"]
 
 # === 6) Facts & claims（映像/台本に使える粒度） ===
 facts:

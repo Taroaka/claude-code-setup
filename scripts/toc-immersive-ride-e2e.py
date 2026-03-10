@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-End-to-end runner for the immersive ride POV workflow.
+End-to-end runner for the immersive (cinematic) workflow.
 
 This script:
 1) Reads an existing script.md (scene descriptions, narration, prompts)
@@ -108,8 +108,8 @@ def build_manifest_from_script(
                     "reference_images": ["assets/characters/protagonist_front.png"],
                     "fixed_prompts": [
                         "photorealistic, cinematic, practical effects, 8K quality, ultra detailed textures",
-                        "First-person POV from ride action boat",
-                        "Realistic hands gripping ornate brass safety bar",
+                        "Character must match reference exactly (same face, hair, outfit).",
+                        "Viewpoint is scene-dependent (POV or third-person), but must not drift within a single cut.",
                     ],
                     "notes": "Generate character turnaround references first and reuse as reference in scenes where this character appears.",
                 }
@@ -173,9 +173,9 @@ def build_manifest_from_script(
 
         motion_prompt = (((visual.get("motion_prompt")) or "").strip() if isinstance(visual, dict) else "")
         if not motion_prompt:
-            motion_prompt = "Ride action boat moves forward smoothly along the track; maintain POV and hands."
+            motion_prompt = "カメラが滑らかに前進し、連続性を維持する（フェード/カットなし）。"
         else:
-            motion_prompt = "Ride action boat moves forward smoothly along the track; " + motion_prompt
+            motion_prompt = "カメラが滑らかに前進し、連続性を維持する（フェード/カットなし）。" + motion_prompt
 
         item: dict = {
             "scene_id": scene_id,
@@ -222,7 +222,7 @@ def build_manifest_from_script(
         manifest["scenes"].append(item)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    md = "# Video Manifest Output (Immersive Ride POV)\n\n```yaml\n"
+    md = "# Video Manifest Output (Immersive)\n\n```yaml\n"
     md += yaml.safe_dump(manifest, sort_keys=False, allow_unicode=True).rstrip()
     md += "\n```\n"
     out_path.write_text(md, encoding="utf-8")
@@ -275,9 +275,8 @@ def main() -> None:
         "--image-prompt-prefix",
         default=(
             "Photorealistic, cinematic, practical effects. 8K quality, ultra detailed textures.\n"
-            "First-person POV from ride action boat (theme park attraction) moving along a visible central track.\n"
-            "Realistic hands gripping ornate brass safety bar in the foreground. No text in image.\n"
-            "A guide character must be present in the scene."
+            "No on-screen text. No watermark.\n"
+            "Viewpoint is scene-dependent (POV or third-person), but must not drift within a single cut."
         ),
         help="Prepended to every image prompt.",
     )
@@ -285,18 +284,17 @@ def main() -> None:
         "--image-prompt-suffix",
         default=(
             "Avoid: animated, animation, cartoon, anime, illustrated, drawing, watermark, logos.\n"
-            "Maintain consistent POV and hands+bar visible."
+            "Maintain consistent characters and continuity."
         ),
         help="Appended to every image prompt.",
     )
     parser.add_argument(
         "--video-prompt-prefix",
         default=(
-            "Photorealistic cinematic ride footage. First-person POV from ride action boat moving along a visible track.\n"
-            "Realistic hands gripping ornate brass safety bar always visible. Guide character present.\n"
+            "Photorealistic cinematic footage.\n"
             "Single continuous take. No cuts, no fade out, no crossfades, no dissolves.\n"
             "Do not switch scenes halfway. No shot change; continuity must be maintained throughout the entire clip.\n"
-            "The environment should evolve continuously as the boat moves forward (no jump transitions).\n"
+            "The environment should evolve continuously as the camera moves forward (no jump transitions).\n"
             "Seamless continuity between first and last frame; natural lighting transition."
         ),
         help="Prepended to every video prompt.",

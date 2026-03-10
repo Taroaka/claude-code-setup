@@ -422,7 +422,11 @@ previsualization_handoff:
 timeline_calculation:
   total_duration: 60  # 秒
 
-  # ヒーローズジャーニー配分
+  # ヒーローズジャーニー配分（参考）
+  #
+  # 注意:
+  # - これは“当てはめる公式”ではなく、配分の例。
+  # - 物語の強みが別の構造にある場合は、スコア（視聴維持/感情/映像化/一貫性）が高くなる配分を優先する。
   phase_allocation:
     ordinary_world:
       percent: 10
@@ -600,12 +604,12 @@ def calculate_scene_timing(total_duration, num_scenes, emotional_arc):
     num_scenes: シーン数
     emotional_arc: 感情曲線タイプ
     """
-    # ヒーローズジャーニー配分
+    # ヒーローズジャーニー配分（参考。物語に合わせて最適化する）
     phases = {
-        'ordinary_world': 0.10,
-        'call_to_adventure': 0.10,
-        'ordeal': 0.40,
-        'transformation': 0.25,
+      'ordinary_world': 0.10,
+      'call_to_adventure': 0.10,
+      'ordeal': 0.40,
+      'transformation': 0.25,
         'return': 0.15
     }
 

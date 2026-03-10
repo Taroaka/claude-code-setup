@@ -89,6 +89,33 @@ scripts/ai/install-codex-skills.sh
 - `era-explainer`: 時代解説（例: 縄文）を cloud_island_walk 等の体験フォーマットへ落とし込み
 - `vertical-shorts-creator`: 承認済みの横動画から縦ショート（9:16, ~60秒）を作る（scene選定→コマンド提示）
 
+## Session bootstrap / verify
+
+日常運用の最小ルーチン:
+
+```bash
+scripts/ai/session-bootstrap.sh
+```
+
+固定手順:
+
+1. `cwd` 確認
+2. `git status` / `git log`
+3. 直近 run の確認
+4. pending gate の確認
+5. fast verify
+
+共通 verify 入口:
+
+```bash
+python scripts/verify-pipeline.py \
+  --run-dir output/<topic>_<timestamp> \
+  --flow toc-run|scene-series|immersive \
+  --profile fast|standard
+```
+
+root guide から外した検索/探索ルールは、引き続き `rg` / `fd` を正とする。
+
 ## Claude Code: rules（任意・グローバル）
 
 `improve_claude_code/rules/*.md` を `~/.claude/rules/` にコピーしてグローバルに適用する。

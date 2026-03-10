@@ -505,6 +505,8 @@ def _parse_manifest_yaml_pyyaml(yaml_text: str) -> tuple[dict, AssetGuides, list
                 except Exception:
                     cut_id = int(idx)
 
+                # Expand cut ids into a stable synthetic scene id.
+                # scene10 cut1 -> 1001, scene10 cut2 -> 1002.
                 cut_scene_id = int(scene_id) * 100 + int(cut_id)
 
                 ig = raw_cut.get("image_generation") if isinstance(raw_cut.get("image_generation"), dict) else {}
@@ -938,6 +940,38 @@ def validate_scene_object_ids(
             )
 
 
+def validate_scene_narration(
+    *, scenes: list[SceneSpec], require: bool, scene_filter: set[int] | None
+) -> None:
+    if not require:
+        return
+    for scene in scenes:
+        if scene_filter is not None and int(scene.scene_id) not in scene_filter:
+            continue
+        # Narration is required only for scenes/cuts that participate in video generation.
+        if not scene.video_tool and not scene.video_output:
+            continue
+
+        if not scene.narration_output:
+            raise SystemExit(
+                f"scene{scene.scene_id}: missing audio.narration.output (required). "
+                "To intentionally generate assets without narration, pass --skip-audio."
+            )
+
+        tool = normalize_tool_name(scene.narration_tool)
+        if not tool:
+            raise SystemExit(
+                f"scene{scene.scene_id}: missing audio.narration.tool (required). "
+                "To intentionally generate assets without narration, pass --skip-audio."
+            )
+
+        if tool == "elevenlabs" and not (scene.narration_text and scene.narration_text.strip()):
+            raise SystemExit(
+                f"scene{scene.scene_id}: missing audio.narration.text for ElevenLabs (required). "
+                "To intentionally generate assets without narration, pass --skip-audio."
+            )
+
+
 def validate_object_reference_scenes(*, scenes: list[SceneSpec], guides: AssetGuides, require: bool) -> None:
     if not require:
         return
@@ -981,6 +1015,57 @@ def _guess_image_suffix(mime_type: str | None) -> str:
     if mt == "image/webp":
         return ".webp"
     return ".bin"
+
+
+def generate_macos_say_tts(
+    *,
+    text: str,
+    out_path: Path,
+    voice: str | None,
+    force: bool,
+    dry_run: bool,
+) -> None:
+    if out_path.exists() and not force:
+        return
+    if dry_run:
+        v = f" voice={voice}" if (voice or "").strip() else ""
+        print(f"[dry-run] AUDIO {out_path} <- macos_say{v}")
+        return
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="toc_say_") as td:
+        td_p = Path(td)
+        aiff = td_p / "tts.aiff"
+        cmd = ["say", "-o", str(aiff)]
+        if (voice or "").strip():
+            cmd += ["-v", str(voice).strip()]
+        cmd.append(text)
+        try:
+            subprocess.run(cmd, check=True)
+        except FileNotFoundError as e:  # pragma: no cover
+            raise SystemExit("macOS 'say' command not found (this tool is macOS-only).") from e
+
+        # Convert to mp3 for downstream compatibility (render-video.sh expects mp3 by default).
+        try:
+            subprocess.run(
+                [
+                    "ffmpeg",
+                    "-y" if force else "-n",
+                    "-i",
+                    str(aiff),
+                    "-vn",
+                    "-ar",
+                    "44100",
+                    "-b:a",
+                    "128k",
+                    str(out_path),
+                ],
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        except FileNotFoundError as e:  # pragma: no cover
+            raise SystemExit("ffmpeg not found (required to convert macos_say output to mp3).") from e
 
 
 def _run(cmd: list[str]) -> None:
@@ -2019,6 +2104,12 @@ def main() -> None:
     parser.add_argument("--elevenlabs-output-format", default=_env("ELEVENLABS_OUTPUT_FORMAT", "mp3_44100_128"))
     parser.add_argument("--tts-prompt-prefix", default="", help="Optional text prepended to every TTS input.")
     parser.add_argument("--tts-prompt-suffix", default="", help="Optional text appended to every TTS input.")
+    parser.add_argument("--macos-say-voice", default=_env("MACOS_SAY_VOICE", ""), help="Voice name for macos_say TTS (macOS only).")
+    parser.add_argument(
+        "--override-narration-tool",
+        default="",
+        help='Force narration tool for all scenes (e.g. "macos_say") for testing/ops. Empty = use manifest value.',
+    )
 
     args = parser.parse_args()
 
@@ -2126,6 +2217,11 @@ def main() -> None:
         scenes=scenes,
         guides=guides,
         require=bool(args.require_object_reference_scenes),
+    )
+    validate_scene_narration(
+        scenes=scenes,
+        require=not bool(args.skip_audio),
+        scene_filter=scene_filter,
     )
 
     aspect_ratio = (
@@ -2795,7 +2891,7 @@ def main() -> None:
         if not out_path:
             raise SystemExit(f"scene{scene.scene_id}: missing narration output path")
 
-        tool = normalize_tool_name(scene.narration_tool)
+        tool = normalize_tool_name((args.override_narration_tool or "").strip() or scene.narration_tool)
         if tool == "elevenlabs":
             if not scene.narration_text:
                 raise SystemExit(f"scene{scene.scene_id}: missing narration text for ElevenLabs TTS")
@@ -2817,6 +2913,23 @@ def main() -> None:
                 duration_seconds=normalize_dur,
                 force=args.force,
                 request_log_path=log_dir / f"scene{scene.scene_id}_tts_request.json",
+                dry_run=args.dry_run,
+            )
+        elif tool in {"macos_say", "say"}:
+            if not scene.narration_text:
+                raise SystemExit(f"scene{scene.scene_id}: missing narration text for macos_say TTS")
+            tts_text = scene.narration_text.strip()
+            tprefix = (args.tts_prompt_prefix or "").strip()
+            tsuffix = (args.tts_prompt_suffix or "").strip()
+            if tprefix:
+                tts_text = tprefix + "\n\n" + tts_text
+            if tsuffix:
+                tts_text = tts_text + "\n\n" + tsuffix
+            generate_macos_say_tts(
+                text=tts_text,
+                out_path=out_path,
+                voice=(args.macos_say_voice or "").strip() or None,
+                force=args.force,
                 dry_run=args.dry_run,
             )
         elif tool in {"tbd", ""}:

@@ -29,7 +29,27 @@
 
 ---
 
-## 物語構造：ヒーローズジャーニー
+## 創造と選択（重要）
+
+物語価値の中心は、登場人物と物語世界（世界観）が生む **多様性**にある。
+台本は「既に流行しているナラティブを映像化する」ことが多いため、素材は高得点になりやすい。
+
+そのため本プロジェクトでは、次を優先する:
+
+- **創造（Creation）**: 解釈/視点/キャラクター/世界観の候補を複数出す（多様性を増やす）
+- **選択（Selection）**: スコア（視聴維持/感情/映像化/分かりやすさ/一貫性）が最も高い案を採る
+- **フレームワークは道具**: 英雄の旅などは「当てはめる公式」ではなく、見落とし防止・品質改善の手段
+
+### 矛盾する記述とハイブリッド（混成）
+
+複数文献に矛盾がある場合は、どちらかを選ぶだけでなく「分離して併記」「演出上の見せ方を変える」なども選択肢になる。
+
+ただし、矛盾する複数ソースの要素を **同一シーン/設定として混成**する（ハイブリッド化する）場合は破綻リスクが高い。
+スコアのために混成が必要なら、確定前に必ずユーザーへ承認を求める（衝突点・混ぜたい要素・スコア理由・リスクと安全策を提示し、Yes/No を取る）。
+
+---
+
+## 参考フレームワーク：ヒーローズジャーニー
 
 ### 理論的背景
 
@@ -353,10 +373,14 @@ Deep Researchの `synthesis.scqa` を物語骨格に変換：
 
 ### Phase 4: 品質検証
 
-#### Step 4.1: ヒーローズジャーニー適合チェック
+#### Step 4.1: 構造整合チェック（任意フレームワーク）
+
+フレームワーク（英雄の旅など）は「当てはめて合否を出す」ためではなく、見落とし防止の道具。
+必要なときだけ使い、物語の強み（登場人物/世界観/フック）を削らない。
 
 ```yaml
-checklist:
+# 例: Hero's Journey を“チェックリスト”として使う場合（任意）
+hero_journey_checklist:
   ordinary_world:
     present: true/false
     position: "0-10%"
@@ -364,14 +388,21 @@ checklist:
     present: true/false
     type: question/problem/opportunity
   ordeal:
-    present: true/false  # 必須
+    present: true/false
     tension_level: 1-10
   transformation:
-    present: true/false  # 必須
+    present: true/false
     before_after_clear: true/false
   return:
     present: true/false
     satisfaction_level: 1-10
+
+# 共通: 物語の整合性（推奨）
+coherence_checklist:
+  narration_visual_consistent: true/false
+  cause_effect_clear: true/false
+  character_motives_clear: true/false
+  world_rules_consistent: true/false
 ```
 
 #### Step 4.2: エンゲージメント品質チェック
@@ -591,13 +622,19 @@ engagement_design:
 
 # === 品質スコア ===
 quality_scores:
-  hero_journey_compliance: 0.0-1.0
   engagement_potential: 0.0-1.0
   information_accuracy: 0.0-1.0
   emotional_impact: 0.0-1.0
+  narrative_coherence: 0.0-1.0
+  selection_quality: 0.0-1.0
+  # フレームワークは任意の“道具”。当てはめのスコアで合否を出さない。
+  framework_notes:
+    hero_journey_fit: "high|medium|low|null"
+    notes: "string"
 
   checklist:
     strong_opening: true
+    # 物語パターンによっては名前/形が変わる（英雄の旅に限らない）
     ordeal_present: true
     transformation_clear: true
     facts_verified: true
@@ -716,7 +753,7 @@ constraints:
    └→ エンディング（85-100%）
 
 6. 品質検証
-   ├→ ヒーローズジャーニー適合
+   ├→ 構造整合（任意フレームワーク）
    ├→ エンゲージメント品質
    └→ 情報正確性
 

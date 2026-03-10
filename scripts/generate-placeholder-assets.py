@@ -151,6 +151,7 @@ def parse_manifest_yaml(yaml_text: str) -> tuple[tuple[int, int], list[SceneAsse
                 cut_id = 1
             in_cut = True
             current = SceneAssetSpec(
+                # Must match scripts/generate-assets-from-manifest.py.
                 scene_id=int(current_scene_id) * 100 + int(cut_id),
                 timestamp=current_scene_timestamp,
                 duration_seconds=current_scene_duration_seconds,

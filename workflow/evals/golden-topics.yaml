@@ -1,0 +1,7 @@
+golden_topics:
+  - topic: "桃太郎"
+    intended_flows: ["toc-run", "scene-series", "immersive"]
+  - topic: "竹取物語"
+    intended_flows: ["toc-run", "scene-series", "immersive"]
+  - topic: "浦島太郎"
+    intended_flows: ["toc-run", "scene-series", "immersive"]

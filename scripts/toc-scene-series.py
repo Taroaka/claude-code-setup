@@ -20,9 +20,16 @@ import argparse
 import datetime as dt
 import re
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from toc.harness import append_state_snapshot
 
 
 @dataclass
@@ -61,11 +68,54 @@ def write_text(path: Path, content: str, force: bool) -> bool:
 
 
 def append_state_block(state_path: Path, kv: dict[str, str]) -> None:
-    state_path.parent.mkdir(parents=True, exist_ok=True)
-    lines = [f"{k}={v}" for k, v in kv.items()]
-    block = "\n".join(lines) + "\n---\n"
-    with state_path.open("a", encoding="utf-8") as f:
-        f.write(block)
+    append_state_snapshot(state_path, kv)
+
+
+def parse_state_file(state_path: Path) -> dict[str, str]:
+    if not state_path.exists():
+        return {}
+    merged: dict[str, str] = {}
+    for raw in state_path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line == "---" or line.startswith("#"):
+            continue
+        if "=" not in line:
+            continue
+        k, v = line.split("=", 1)
+        k = k.strip()
+        v = v.strip().replace("\n", " ")
+        if k:
+            merged[k] = v
+    return merged
+
+
+def detect_hybridization_pending(md_text: str) -> bool:
+    """
+    Conservative detector for "hybridization requires human approval".
+
+    We treat it as pending when:
+    - YAML contains hybridization.approval_status: pending
+    - OR any selection candidate requires_hybridization_approval: true
+
+    If no YAML block exists, we fall back to a substring check.
+    """
+    try:
+        yaml_text = extract_yaml_block(md_text)
+    except Exception:
+        t = md_text.lower()
+        return ("approval_status: pending" in t) or ("requires_hybridization_approval: true" in t)
+
+    pending = False
+    for _, ctx, key, value in iter_kv_lines(yaml_text):
+        if key == "approval_status" and "hybridization" in ctx:
+            v = (parse_yaml_scalar(value) or "").strip().lower()
+            if v == "pending":
+                pending = True
+        if key == "requires_hybridization_approval" and "candidates" in ctx and "selection" in ctx:
+            v = (parse_yaml_scalar(value) or "").strip().lower()
+            if v in {"true", "yes", "1"}:
+                pending = True
+    return pending
 
 
 def extract_yaml_block(text: str) -> str:
@@ -217,7 +267,7 @@ def render_series_plan_md(
     script_ref = str(source_script) if source_script else f"output/{topic}_{timestamp}/script.md"
 
     lines = [
-        "# Series Plan (DRAFT)",
+        "# シリーズプラン（DRAFT）",
         "",
         "```yaml",
         "series_plan_metadata:",
@@ -237,7 +287,7 @@ def render_series_plan_md(
             '    main_text: "TBD"',
             '    question: "TBD?"',
             f"    target_seconds: {default_target_seconds}",
-            '    notes: "No scenes found in story/script yet."',
+            '    notes: "story/script から scene が見つからないため暫定。"',
         ]
     else:
         for s in scenes:
@@ -258,29 +308,29 @@ def render_series_plan_md(
 def render_evidence_md(scene_id: int, question: str) -> str:
     return "\n".join(
         [
-            f"# Evidence (Scene {scene_id:02d})",
+            f"# 根拠（Scene {scene_id:02d}）",
             "",
-            "## Question",
+            "## 質問",
             "",
             question,
             "",
-            "## Answer (short)",
+            "## 結論（短く）",
             "",
-            "TBD",
+            "TODO",
             "",
-            "## Evidence bullets",
+            "## 根拠（箇条書き）",
             "",
-            "- TBD",
-            "- TBD",
-            "- TBD",
+            "- TODO",
+            "- TODO",
+            "- TODO",
             "",
-            "## Sources",
+            "## ソース",
             "",
-            "- TBD",
+            "- TODO",
             "",
-            "## Gaps / Notes",
+            "## 不確実点 / メモ",
             "",
-            "- TBD",
+            "- TODO",
             "",
         ]
     )
@@ -289,7 +339,7 @@ def render_evidence_md(scene_id: int, question: str) -> str:
 def render_scene_script_md(topic: str, scene_id: int, target_seconds: int, main_text: str, question: str) -> str:
     return "\n".join(
         [
-            "# Scene Script (Q&A) (DRAFT)",
+            "# シーン台本（Q&A）（DRAFT）",
             "",
             "```yaml",
             "scene_script_metadata:",
@@ -300,19 +350,19 @@ def render_scene_script_md(topic: str, scene_id: int, target_seconds: int, main_
             "",
             "narration:",
             f'  hook: "{question}"',
-            '  answer: "TBD"',
+            '  answer: "TODO"',
             "  evidence:",
-            '    - "TBD"',
-            '    - "TBD"',
-            '    - "TBD"',
-            '  close: "TBD"',
+            '    - "TODO"',
+            '    - "TODO"',
+            '    - "TODO"',
+            '  close: "TODO"',
             "",
             "text_overlay:",
             f'  main_text: "{main_text}"',
             f'  sub_text: "{question}"',
             "",
             "notes:",
-            '  - "Visual style (real/abstract) is deferred; keep prompts flexible."',
+            '  - "映像方針（現実寄り/抽象寄り）は後で確定する。プロンプトは柔軟に保つ。"',
             "```",
             "",
         ]
@@ -338,12 +388,12 @@ def render_scene_manifest_md(
 
     # Keep prompts as placeholders (real/abstract decision deferred).
     image_prompt = (
-        "TODO: Visual for answering the question.\n"
-        "- Prefer explainable visuals (diagram/abstract) unless a realistic reenactment is explicitly desired.\n"
-        "- No text in the image; overlays handled separately.\n"
+        "TODO: 質問に答えるための映像。\n"
+        "- 実写再現が明確に望まれていない限り、説明可能なビジュアル（図解/抽象）を優先。\n"
+        "- 画像内に文字を入れない（テロップは別で扱う）。\n"
     )
 
-    motion_prompt = "TODO: minimal camera movement; keep it readable for overlays."
+    motion_prompt = "TODO: 最小限のカメラ動き。テロップが読める可読性を優先。"
 
     # Cut planning (DRAFT):
     # - 1 cut = 1 narration
@@ -413,7 +463,7 @@ def render_scene_manifest_md(
     cut_count = len(cut_plan)
 
     lines = [
-        "# Scene Video Manifest Output (DRAFT)",
+        "# シーン動画マニフェスト（DRAFT）",
         "",
         "```yaml",
         "video_metadata:",
@@ -436,12 +486,15 @@ def render_scene_manifest_md(
         "    cuts:",
     ]
     for idx, (role, dur) in enumerate(cut_plan, start=1):
-        cut_narration_text = f"TODO: Part {idx}/{cut_count} for '{question}' (role={role}, main=5-15s, sub=3-15s)."
+        # NOTE: narration.text is sent to TTS as-is. Keep it empty so missing narration is caught early.
+        cut_narration_text = ""
         lines += [
             f"      - cut_id: {idx}",
             f'        cut_role: "{role}"',
             "        image_generation:",
             '          tool: "google_nanobanana_pro"',
+            "          character_ids: []",
+            "          object_ids: []",
             "          prompt: |",
         ]
         lines += ["            " + ln for ln in image_prompt.rstrip().splitlines()]
@@ -540,14 +593,42 @@ def main() -> None:
                 "topic": topic_raw,
                 "status": "INIT",
                 "runtime.stage": "scene_series",
+                "gate.video_review": "required",
             },
         )
 
-    write_text(run_dir / "research.md", "# Research Output\n\nTBD\n", force=False)
-    write_text(run_dir / "story.md", "# Story Script Output\n\nTBD\n", force=False)
+    write_text(run_dir / "research.md", "# リサーチ（出力）\n\nTODO\n", force=False)
+    write_text(run_dir / "story.md", "# 物語（story）\n\nTODO\n", force=False)
 
     source_script = run_dir / "script.md"
     source_story = run_dir / "story.md"
+
+    # Hybridization approval gate (human required).
+    # If story/script indicates a hybridization proposal pending approval, stop here.
+    story_md = source_story.read_text(encoding="utf-8") if source_story.exists() else ""
+    script_md = source_script.read_text(encoding="utf-8") if source_script.exists() else ""
+    hybrid_pending = detect_hybridization_pending(script_md) or detect_hybridization_pending(story_md)
+    if hybrid_pending:
+        state = parse_state_file(state_path)
+        status = state.get("review.hybridization.status", "").strip().lower()
+        if status != "approved":
+            append_state_block(
+                state_path,
+                {
+                    "timestamp": now_iso(),
+                    "topic": topic_raw,
+                    "status": "STORY",
+                    "runtime.stage": "hybridization_review",
+                    "gate.hybridization_review": "required",
+                    "review.hybridization.status": "pending",
+                },
+            )
+            print("Hybridization approval is required before scaffolding scene-series.")
+            print(f"Run dir: {run_dir}")
+            print("Approve (or reject) after reviewing story/script:")
+            print(f'  python scripts/toc-state.py approve-hybridization --run-dir "{run_dir}" --note "OK"')
+            print(f'  python scripts/toc-state.py reject-hybridization --run-dir "{run_dir}" --note "NG"')
+            raise SystemExit(2)
 
     scenes: list[SceneQuestion] = []
     if source_script.exists():

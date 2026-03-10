@@ -302,7 +302,9 @@ class KlingClient:
             "model_name": model or self.config.video_model,
             "prompt": prompt,
             "duration": str(int(duration_seconds)),
+            "duration_seconds": int(duration_seconds),
             "aspect_ratio": aspect_ratio,
+            "resolution": resolution,
         }
         # Keep compatibility with older docs/tools that still use "model".
         payload["model"] = payload["model_name"]
@@ -312,9 +314,19 @@ class KlingClient:
 
         # Best-effort: inline base64 images (supported by some official docs).
         if input_image is not None:
-            payload["image"] = base64.b64encode(input_image.read_bytes()).decode("ascii")
+            image_b64 = base64.b64encode(input_image.read_bytes()).decode("ascii")
+            payload["image"] = image_b64
+            payload["first_frame_image"] = {
+                "mime_type": _guess_mime(input_image),
+                "data": image_b64,
+            }
         if last_frame_image is not None:
-            payload["image_tail"] = base64.b64encode(last_frame_image.read_bytes()).decode("ascii")
+            image_tail_b64 = base64.b64encode(last_frame_image.read_bytes()).decode("ascii")
+            payload["image_tail"] = image_tail_b64
+            payload["last_frame_image"] = {
+                "mime_type": _guess_mime(last_frame_image),
+                "data": image_tail_b64,
+            }
 
         if extra_payload:
             payload = _deep_merge(payload, extra_payload)

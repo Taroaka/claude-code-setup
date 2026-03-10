@@ -84,10 +84,11 @@ def _default_cut_skeleton(scene_id: int, cut_id: int) -> dict:
             "object_ids": [],
             "prompt": (
                 "[TODO]\n"
-                f"Scene {scene_id} / Cut {cut_id}: write a concrete cinematic prompt.\n"
-                "- First-person POV (immersive ride) continuity.\n"
-                "- Specify purpose, location, action, composition, camera.\n"
-                "- No text, no watermark.\n"
+                f"Scene {scene_id} / Cut {cut_id}: 具体的でシネマティックな画像プロンプトを書く（日本語）。\n"
+                "- 視点（POV/三人称）は目的に応じて選び、1カット内でブレさせない。\n"
+                "- 目的/場所/アクション/構図/カメラを明示。\n"
+                "- 画面内テキストなし、字幕なし、ウォーターマークなし、ロゴなし。\n"
+                "- 固定の乗り物/デバイスを前提にしない。\n"
             ),
             "output": f"assets/scenes/scene{scene_id:02d}_cut{cut_id:02d}.png",
             "aspect_ratio": "16:9",
@@ -148,10 +149,11 @@ def main() -> None:
                         "      character_ids: []",
                         "      object_ids: []",
                         "      prompt: |",
-                        f"        [TODO] Scene {sid} / Cut {cut_id}: write a concrete cinematic prompt.",
-                        "        - First-person POV (immersive ride) continuity.",
-                        "        - Specify purpose, location, action, composition, camera.",
-                        "        - No text, no watermark.",
+                        f"        [TODO] Scene {sid} / Cut {cut_id}: 具体的でシネマティックな画像プロンプトを書く（日本語）。",
+                        "        - 視点（POV/三人称）は目的に応じて選び、1カット内でブレさせない。",
+                        "        - 目的/場所/アクション/構図/カメラを明示。",
+                        "        - 画面内テキストなし、字幕なし、ウォーターマークなし、ロゴなし。",
+                        "        - 固定の乗り物/デバイスを前提にしない。",
                         f"      output: {out}",
                         "      aspect_ratio: '16:9'",
                         "      image_size: 2K",
@@ -210,8 +212,8 @@ def main() -> None:
     print(f"Run dir: {run_dir}")
     print(f"Prepared scratch: {scratch_dir}")
     print("Targets:", ",".join(str(s) for s in targets))
-    print("Next (parallel): edit scratch/cuts/sceneXX.yaml per scene.")
-    print("Next (single-writer):")
+    print("次（並列）: scene担当は scratch/cuts/sceneXX.yaml を編集する。")
+    print("次（single-writer）:")
     print(f'  python scripts/ai/merge-immersive-cuts.py --run-dir "{run_dir}"')
 
 

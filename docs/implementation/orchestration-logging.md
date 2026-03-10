@@ -10,12 +10,18 @@
 
 ```
 output/<topic>_<timestamp>/
+  run_status.json
+  eval_report.json
   orchestration_manifest.md
   run_report.md
   logs/
     <STAGE>_input.json
     <STAGE>_output.json
 ```
+
+- `run_status.json`: `state.txt` から派生する machine-facing 状態
+- `eval_report.json`: stage-gated verify の JSON 出力
+- `run_report.md`: `eval_report.json` から生成する human-facing report
 
 ## ログ（最小フィールド）
 

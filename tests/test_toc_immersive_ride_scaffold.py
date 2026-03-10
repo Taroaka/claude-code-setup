@@ -31,6 +31,7 @@ class TestTocImmersiveRideScaffold(unittest.TestCase):
 
             run_dir = base / "テスト_トピック_20990101_0000"
             self.assertTrue((run_dir / "state.txt").exists())
+            self.assertTrue((run_dir / "run_status.json").exists())
             self.assertTrue((run_dir / "research.md").exists())
             self.assertTrue((run_dir / "story.md").exists())
             self.assertTrue((run_dir / "script.md").exists())

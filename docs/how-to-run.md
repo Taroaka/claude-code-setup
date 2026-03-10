@@ -5,7 +5,12 @@
 ## 前提
 - 起点は Claude Code の slash command（例: `/toc-run`, `/toc-scene-series`, `/toc-immersive-ride`）
 - 成果物は `output/<topic>_<timestamp>/` に生成される
+- 成果物（`research.md` / `story.md` / `script.md` / `video_manifest.md` 等）の本文は **日本語**で記述する（ユーザーがそのまま修正できるように）
+  - 例外: ツール名 / ファイルパス / コード / 固有名詞はそのまま（必要なら英語併記はOK）
 - state は `output/<topic>_<timestamp>/state.txt`（追記型）
+- 方針: **創造→選択**
+  - Research は多様性（登場人物/世界観/解釈）を厚めに集め、Story/Script でスコアが高い案を選択する
+  - 矛盾する複数ソースの要素を同一シーン/設定として混成（ハイブリッド）する必要が出た場合は、確定前にユーザー承認を取る（運用）
 
 ## セットアップ（Docker）
 
@@ -39,7 +44,7 @@ sceneごとにQ&A動画を複数本作る場合:
 /toc-scene-series "桃太郎" --min-seconds 30 --max-seconds 60
 ```
 
-没入型（First-person POV）実写ライド体験の単発動画:
+没入型（実写シネマティック体験）の単発動画:
 
 ```text
 /toc-immersive-ride --topic "桃太郎"
@@ -98,7 +103,7 @@ python scripts/generate-assets-from-manifest.py \
   --character-reference-views front,side,back \
   --character-reference-strip \
   --image-batch-size 10 --image-batch-index 1 \
-  # --skip-audio を外すと ElevenLabs でナレーション生成も行う
+  # ナレーション音声を生成しない（意図的にサイレントで進める）場合だけ --skip-audio を付ける
 
 python scripts/build-clip-lists.py \
   --manifest output/momotaro_20260110_1700/video_manifest.md \
@@ -115,3 +120,22 @@ scripts/render-video.sh \
 - `state.txt` は追記型（最新ブロックが現在状態）
 - 擬似ロールバックは「過去ブロックのコピーを末尾に追記」で再現する
 - スキーマは `workflow/state-schema.txt` を参照
+- 物語の矛盾ソースを同一シーン/設定として混成（ハイブリッド）する場合は、確定前に人間承認を取る（運用）
+  - 承認: `python scripts/toc-state.py approve-hybridization --run-dir output/<topic>_<timestamp> --note "OK"`
+
+## verify
+
+run ごとの標準 verify:
+
+```bash
+python scripts/verify-pipeline.py \
+  --run-dir output/<topic>_<timestamp> \
+  --flow toc-run|scene-series|immersive \
+  --profile fast|standard
+```
+
+生成物:
+
+- `run_status.json`
+- `eval_report.json`
+- `run_report.md`

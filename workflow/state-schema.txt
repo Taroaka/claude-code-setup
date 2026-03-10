@@ -15,10 +15,14 @@
 # Optional keys:
 #   runtime.stage=init|assets|render|done|shorts|...
 #   runtime.render.status=started|success|failed
-#   immersive.experience=ride_action_boat|cloud_island_walk
+#   immersive.experience=cinematic_story|cloud_island_walk|ride_action_boat  # ride_action_boat は legacy alias
 #   gate.research_review=required|optional|skipped
 #   gate.story_review=required|optional|skipped
 #   gate.video_review=required|optional|skipped
+#   gate.hybridization_review=required|optional|skipped
+#   review.hybridization.status=pending|approved|rejected
+#   review.hybridization.note=string
+#   review.hybridization.at=ISO8601
 #   artifact.research=output/<topic>_<timestamp>/research.md
 #   artifact.story=output/<topic>_<timestamp>/story.md
 #   artifact.script=output/<topic>_<timestamp>/script.md
@@ -27,6 +31,13 @@
 #   review.video.status=pending|approved|changes_requested
 #   review.video.note=string
 #   review.video.at=ISO8601
+#   eval.research.score=0.0-1.0
+#   eval.story.score=0.0-1.0
+#   eval.script.score=0.0-1.0
+#   eval.manifest.score=0.0-1.0
+#   selection.story.candidate_count=2
+#   selection.story.chosen_id=A
+#   artifact.eval_report=output/<topic>_<timestamp>/eval_report.json
 #   qa.accuracy_score=0.0-1.0
 #   qa.engagement_score=0.0-1.0
 #   qa.consistency_score=0.0-1.0
@@ -46,5 +57,7 @@
 # status=RESEARCH
 # gate.research_review=required
 # artifact.research=output/momotaro_20260117_1200/research.md
+# eval.research.score=0.8500
+# artifact.eval_report=output/momotaro_20260117_1200/eval_report.json
 # runtime.attempts.research=1
 # ---

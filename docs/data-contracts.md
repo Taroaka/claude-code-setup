@@ -32,6 +32,17 @@ artifact.video=output/<topic>_<timestamp>/video.mp4
 
 対応テンプレート: `workflow/state-schema.txt`
 
+派生物（machine-facing）:
+
+```
+output/<topic>_<timestamp>/run_status.json
+```
+
+- `state.txt` の flat / nested view
+- artifact inventory
+- pending gate
+- `eval_report.json`（あれば埋め込む）
+
 ---
 
 ## 2. Artifact paths（成果物パス）
@@ -75,6 +86,11 @@ output/<topic>_<timestamp>/
 
 各テンプレートは `docs/information-gathering.md` / `docs/story-creation.md` /
 `docs/script-creation.md` のスキーマから最小フィールドのみ抽出。
+
+評価仕様の正本:
+
+- `workflow/evaluation_criteria.md`
+- `workflow/evals/golden-topics.yaml`
 
 ---
 

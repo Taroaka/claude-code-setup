@@ -5,7 +5,8 @@
 ## 目的
 
 Claude Code の slash command を起点に、最小限の入力（topic）で
-「没入型（First-person POV）実写シネマ・ライド体験」動画を **1本**生成する。
+「没入型（実写シネマティック体験）」動画を **1本**生成する。
+（視点は experience / scene の意図に応じて選び、必ずしも一人称POVに固定しない）
 
 ## 仕様（想定）
 
@@ -15,8 +16,9 @@ Claude Code の slash command を起点に、最小限の入力（topic）で
   - `--dry-run`（任意。外部生成APIは呼ばない）
   - `--config`（任意。`config/system.yaml` を差し替え）
   - `--experience`（任意。default: `cloud_island_walk`）
-    - `ride_action_boat`: 従来のテーマパーク・ライド（ボート/安全バー）パターン
+    - `cinematic_story`: 物語を映画的に見せる（視点は必要に応じて。固定デバイスを前提にしない）
     - `cloud_island_walk`: 雲上の島を歩いて理解を深める（哲学/概念の比喩）パターン
+    - `ride_action_boat`: 互換用の legacy 名（内部的には `cinematic_story` 扱い）
 
 ## 挙動（成果物）
 
@@ -26,7 +28,7 @@ run root:
   - `state.txt`（追記型）
   - `research.md`
   - `story.md`
-  - `script.md`
+  - `script.md`（言語情報の正本）
   - `video_manifest.md`
   - `assets/**`
   - `video.mp4`（完成。1280x720 / 24fps）
@@ -35,17 +37,17 @@ run root:
 
 共通（必須）:
 
-- POV: First-person POV（視点固定）
+- 視点: scene の意図に応じて **POV / 三人称** を選んでよい（ただし 1カット内で視点ブレさせない）
 - Style: photorealistic / cinematic / practical effects（アニメ調排除）
+- 映像内の文字は禁止（画面内テキスト/字幕/ウォーターマーク/ロゴ）
 - ガイドは音声（ナレーション）として必須（視覚的に登場させない）
 
-`ride_action_boat`（legacy / optional）:
+`cinematic_story`:
 
 - 統一要素:
-  - 人間の手（年齢/性別は指定しない。必要なら作品側で指定）
-  - ornate brass safety bar
-  - ride action boat（線路に沿って進む）
-  - 物語キャラクターが毎scene登場
+  - 視点は必要に応じて（POV固定にしない）
+  - 固定の乗り物/デバイスを前景アンカーにしない
+  - 物語キャラクター / 主役級アイテム（例: 玉手箱）をアンカーにして連続性を作る（照明/色/構図も含む）
 
 `cloud_island_walk`（default）:
 
@@ -57,7 +59,7 @@ run root:
 ## 生成設計（最小）
 
 - 画像:
-  - 参照画像（キャラクター/重要小道具）を **必要なscene** に適用（`ride_action_boat` では手元アンカー/乗り物参照も検討）
+  - 参照画像（キャラクター/重要小道具）を **必要なscene** に適用（必要なら scene 側で `references` を指定）
   - 16:9 / 2K（素材側）
 - 動画:
   - provider は `video_manifest.md` の `scenes[].video_generation.tool` で選ぶ（default: `kling_3_0` / alt: `seedance`）
@@ -70,9 +72,11 @@ run root:
     - ネガティブプロンプトでフェード/カット系を抑制（`--video-negative-prompt`）
     - 直前clip終盤のフレームを次clipの first frame に使う chaining（`--chain-first-frame-from-prev-video`）
 - 音声:
-  - ElevenLabs（男性 / calm, mystical storytelling）
-  - run root に単一音声として生成し、最終結合で合わせる
-  - 反復中は音声を省略してサイレントで書き出してよい（`--skip-audio`）
+  - ElevenLabs（voice/model は運用で確定）
+  - **1カット=1ナレーション**（`audio.narration.output` は cut/clip ごとに分割）
+  - `audio.narration.text` は Narration Writer が確定する（`TODO:` 等のメタ情報は入れない）
+  - 先に音声だけ生成し、実秒から `duration_seconds` / `timestamp` を同期してから映像生成に進む
+  - 反復中に意図的に音声を省略してサイレントで進める場合のみ `--skip-audio` を使う
 
 ## コスト最適化（任意）
 

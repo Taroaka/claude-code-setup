@@ -5,6 +5,45 @@ story_metadata:
   created_at: "ISO8601"
   pattern_used: "hidden_truth|counterintuitive|mystery|hero|emotional"
 
+# Creative selection（推奨: 複数案→選択）
+#
+# 目的:
+# - “創造”で多様性を出し、“選択”でスコアが高い案を採用する。
+# - Hero's Journey への当てはめは必須ではない（フレームワークは道具）。
+selection:
+  candidates:
+    - candidate_id: "A"
+      logline: "string"
+      why_it_scores: ["string"]
+      score_hint:
+        engagement: 0.0
+        coherence: 0.0
+        production_fit: 0.0
+      requires_hybridization_approval: false
+      conflicts_referenced: ["research.conflicts[C1]"]
+    - candidate_id: "B"
+      logline: "string"
+      why_it_scores: ["string"]
+      score_hint:
+        engagement: 0.0
+        coherence: 0.0
+        production_fit: 0.0
+      requires_hybridization_approval: false
+      conflicts_referenced: []
+  chosen_candidate_id: "A"
+  rationale: "string"
+
+# Hybridization approval gate（混成する場合は承認必須・運用）
+hybridization:
+  approval_status: "not_needed|pending|approved|rejected"
+  proposal:
+    summary: "string"
+    conflicts_referenced: ["research.conflicts[C1]"]
+    mix_elements: ["string"]
+    risks: ["string"]
+    mitigations: ["string"]
+    question_for_user: "このハイブリッド（混成）で進めてよいですか？"
+
 story_structure:
   protagonist:
     name: "string"

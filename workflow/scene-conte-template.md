@@ -15,7 +15,9 @@
 - topic: `<topic>`
 - run: `output/<topic>_<timestamp>/`
 - created_at: `<ISO8601>`
-- experience: `ride_action_boat|cloud_island_walk|...`
+- experience: `cinematic_story|cloud_island_walk|...`（`ride_action_boat` は legacy alias）
+- source_script: `output/<topic>_<timestamp>/script.md`
+- rule: `scene_conte は script.md を分解した橋渡し資料。新しい物語情報を足さない`
 
 ## 1) シーン設計（映画での役割）
 

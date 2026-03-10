@@ -13,12 +13,13 @@
 ## 2. Build/Test pipeline
 
 - **CI**: GitHub Actions
-- **最小チェック**:
-  - Python 3.11 セットアップ
-  - 依存インストール（`requirements.txt` がある場合）
-  - `python -m compileall .`
-  - Dry-run: `python scripts/build-clip-lists.py --help`
-  - テストは存在する場合のみ実行（`tests/` があるとき）
+- **Fast lane**:
+  - pointer validator
+  - state / verify / scaffold 系の契約テスト
+- **Full lane**:
+  - 全テスト
+  - golden topic dry-run
+  - placeholder smoke render
 
 ## 3. Deploy workflow & rollback
 

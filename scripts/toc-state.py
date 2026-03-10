@@ -11,44 +11,29 @@ State format:
 from __future__ import annotations
 
 import argparse
-import datetime as dt
 import re
 import sys
 from pathlib import Path
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
-def now_iso() -> str:
-    return dt.datetime.now().astimezone().isoformat(timespec="seconds")
-
-
-def new_job_id(now: dt.datetime | None = None) -> str:
-    n = now or dt.datetime.now()
-    return f"JOB_{n.strftime('%Y-%m-%d')}_{n.strftime('%H%M%S')}"
-
-
-def extract_yaml_block(text: str) -> str:
-    m = re.search(r"```yaml\s*\n(.*?)\n```", text, flags=re.DOTALL)
-    if not m:
-        raise SystemExit("No ```yaml ... ``` block found in manifest markdown.")
-    return m.group(1)
-
-
-def _safe_load_yaml(text: str) -> dict:
-    try:
-        import yaml  # type: ignore
-    except Exception:
-        return {}
-    try:
-        data = yaml.safe_load(text)
-    except Exception:
-        return {}
-    return data if isinstance(data, dict) else {}
+from toc.harness import (
+    append_state_snapshot,
+    extract_yaml_block,
+    now_iso,
+    parse_state_file,
+    resolve_artifact_path as _resolve_artifact_path,
+    safe_load_yaml,
+    sync_run_status,
+)
 
 
 def read_manifest_topic(manifest_path: Path) -> str:
     md = manifest_path.read_text(encoding="utf-8")
     y = extract_yaml_block(md)
-    data = _safe_load_yaml(y)
+    data = safe_load_yaml(y)
     topic = None
     vm = data.get("video_metadata")
     if isinstance(vm, dict):
@@ -61,72 +46,6 @@ def read_manifest_topic(manifest_path: Path) -> str:
     if not topic_s:
         raise SystemExit(f"Failed to read topic from manifest: {manifest_path}")
     return topic_s
-
-
-def parse_state_file(state_path: Path) -> dict[str, str]:
-    if not state_path.exists():
-        return {}
-    merged: dict[str, str] = {}
-    for raw in state_path.read_text(encoding="utf-8").splitlines():
-        line = raw.strip()
-        if not line or line == "---" or line.startswith("#"):
-            continue
-        if "=" not in line:
-            continue
-        k, v = line.split("=", 1)
-        k = k.strip()
-        v = v.strip().replace("\n", " ")
-        if not k:
-            continue
-        merged[k] = v
-    return merged
-
-
-def _order_keys(state: dict[str, str]) -> list[str]:
-    preferred = [
-        "timestamp",
-        "job_id",
-        "topic",
-        "status",
-        "runtime.stage",
-        "runtime.render.status",
-        "review.video.status",
-        "review.video.at",
-        "review.video.note",
-        "artifact.video",
-        "artifact.video.short.01",
-        "artifact.video_manifest",
-        "last_error",
-    ]
-    out: list[str] = [k for k in preferred if k in state]
-    out.extend(sorted(k for k in state.keys() if k not in set(preferred)))
-    return out
-
-
-def append_state_snapshot(state_path: Path, updates: dict[str, str]) -> dict[str, str]:
-    state_path.parent.mkdir(parents=True, exist_ok=True)
-    merged = parse_state_file(state_path)
-
-    if "job_id" not in merged or not merged["job_id"].strip():
-        merged["job_id"] = new_job_id()
-    if "status" not in merged or not merged["status"].strip():
-        merged["status"] = "INIT"
-
-    merged.update({k: v.replace("\n", " ").strip() for k, v in updates.items()})
-    merged["timestamp"] = now_iso()
-
-    lines = [f"{k}={merged[k]}" for k in _order_keys(merged)]
-    block = "\n".join(lines) + "\n---\n"
-    with state_path.open("a", encoding="utf-8") as f:
-        f.write(block)
-    return merged
-
-
-def _resolve_artifact_path(run_dir: Path, value: str | None) -> Path | None:
-    if not value:
-        return None
-    p = Path(value)
-    return p if p.is_absolute() else (run_dir / p)
 
 
 def cmd_ensure(args: argparse.Namespace) -> int:
@@ -147,6 +66,7 @@ def cmd_ensure(args: argparse.Namespace) -> int:
             "topic": topic,
             "status": "INIT",
             "runtime.stage": "init",
+            "gate.video_review": "required",
             "artifact.video_manifest": str(manifest.resolve()),
         },
     )
@@ -194,6 +114,38 @@ def cmd_approve_video(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_approve_hybridization(args: argparse.Namespace) -> int:
+    run_dir = Path(args.run_dir)
+    state_path = run_dir / "state.txt"
+    if not state_path.exists():
+        raise SystemExit(f"state.txt not found: {state_path} (run ensure first)")
+    updates: dict[str, str] = {
+        "gate.hybridization_review": "required",
+        "review.hybridization.status": "approved",
+        "review.hybridization.at": now_iso(),
+    }
+    if args.note:
+        updates["review.hybridization.note"] = str(args.note).replace("\n", " ").strip()
+    append_state_snapshot(state_path, updates)
+    return 0
+
+
+def cmd_reject_hybridization(args: argparse.Namespace) -> int:
+    run_dir = Path(args.run_dir)
+    state_path = run_dir / "state.txt"
+    if not state_path.exists():
+        raise SystemExit(f"state.txt not found: {state_path} (run ensure first)")
+    updates: dict[str, str] = {
+        "gate.hybridization_review": "required",
+        "review.hybridization.status": "rejected",
+        "review.hybridization.at": now_iso(),
+    }
+    if args.note:
+        updates["review.hybridization.note"] = str(args.note).replace("\n", " ").strip()
+    append_state_snapshot(state_path, updates)
+    return 0
+
+
 def cmd_show(args: argparse.Namespace) -> int:
     run_dir = Path(args.run_dir)
     state_path = run_dir / "state.txt"
@@ -204,6 +156,10 @@ def cmd_show(args: argparse.Namespace) -> int:
     topic = state.get("topic", "")
     stage = state.get("runtime.stage", "")
     render_status = state.get("runtime.render.status", "")
+    hybrid_gate = state.get("gate.hybridization_review", "")
+    hybrid_status = state.get("review.hybridization.status", "")
+    hybrid_at = state.get("review.hybridization.at", "")
+    hybrid_note = state.get("review.hybridization.note", "")
     review_status = state.get("review.video.status", "")
     review_at = state.get("review.video.at", "")
     review_note = state.get("review.video.note", "")
@@ -220,6 +176,15 @@ def cmd_show(args: argparse.Namespace) -> int:
         print(f"Stage: {stage}")
     if render_status:
         print(f"Render: {render_status}")
+    if hybrid_gate or hybrid_status:
+        s = f"Hybridization gate: {hybrid_gate or '(unset)'}"
+        if hybrid_status:
+            s += f" / review={hybrid_status}"
+        if hybrid_at:
+            s += f" at {hybrid_at}"
+        print(s)
+        if hybrid_note:
+            print(f"Hybridization note: {hybrid_note}")
     print(f"Video: {artifact_video} ({'exists' if video_exists else 'missing'})")
     if review_status:
         s = f"Review: {review_status}"
@@ -230,6 +195,17 @@ def cmd_show(args: argparse.Namespace) -> int:
             print(f"Review note: {review_note}")
     if last_error:
         print(f"Last error: {last_error}")
+    print(f"Run status: {sync_run_status(run_dir)}")
+    return 0
+
+
+def cmd_sync(args: argparse.Namespace) -> int:
+    run_dir = Path(args.run_dir)
+    state_path = run_dir / "state.txt"
+    if not state_path.exists():
+        raise SystemExit(f"state.txt not found: {state_path}")
+    output = sync_run_status(run_dir)
+    print(output)
     return 0
 
 
@@ -252,9 +228,23 @@ def main() -> int:
     p_approve.add_argument("--note", default=None)
     p_approve.set_defaults(fn=cmd_approve_video)
 
+    p_h_approve = sub.add_parser("approve-hybridization", help="Approve narrative hybridization (human gate).")
+    p_h_approve.add_argument("--run-dir", required=True)
+    p_h_approve.add_argument("--note", default=None)
+    p_h_approve.set_defaults(fn=cmd_approve_hybridization)
+
+    p_h_reject = sub.add_parser("reject-hybridization", help="Reject narrative hybridization (human gate).")
+    p_h_reject.add_argument("--run-dir", required=True)
+    p_h_reject.add_argument("--note", default=None)
+    p_h_reject.set_defaults(fn=cmd_reject_hybridization)
+
     p_show = sub.add_parser("show", help="Show current state summary.")
     p_show.add_argument("--run-dir", required=True)
     p_show.set_defaults(fn=cmd_show)
+
+    p_sync = sub.add_parser("sync", help="Regenerate run_status.json from state.txt (+ eval report if present).")
+    p_sync.add_argument("--run-dir", required=True)
+    p_sync.set_defaults(fn=cmd_sync)
 
     args = parser.parse_args()
     return int(args.fn(args))

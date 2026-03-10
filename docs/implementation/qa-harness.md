@@ -5,14 +5,28 @@
 ## 方針
 
 - 人間レビューを標準とする
-- 任意の自動チェックは「完成物評価後」に限り実施可
-  - 影響範囲は指摘箇所のみ（全体再生成はしない）
+- 自動チェックは `scripts/verify-pipeline.py` に集約する
+- 自動評価は stage ごとの gate とし、全体再生成ではなく failing stage の切り分けに使う
 
 ## 回帰トピック（例）
 
 - 桃太郎
 - 竹取物語
 - 浦島太郎
+
+## 自動レビュー
+
+```bash
+python scripts/verify-pipeline.py \
+  --run-dir output/<topic>_<timestamp> \
+  --flow toc-run|scene-series|immersive \
+  --profile fast|standard
+```
+
+成果物:
+
+- `eval_report.json`
+- `run_report.md`
 
 ## 手動レビュー
 
@@ -22,3 +36,4 @@
 ## 参照
 
 - `docs/orchestration-and-ops.md`
+- `workflow/evaluation_criteria.md`

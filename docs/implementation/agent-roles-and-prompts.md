@@ -25,6 +25,12 @@
 - 出力: `script.md`
 - 参照: `docs/script-creation.md`
 
+### Narration Writer（TTS原稿）
+- 入力: `story.md` / `script.md` / `video_manifest.md`
+- 出力: `video_manifest.md` の `audio.narration.text`
+- 原則: `audio.narration.text` は TTS にそのまま送られるため、`TODO:` 等のメタ情報を書かない（空文字は可。未記入は生成時にエラー）
+- エージェント定義: `.claude/agents/narration-writer.md`
+
 ### Reviewer（Director兼務可）
 - 入力: scene draft / script
 - 出力: `accept | revise` + 理由

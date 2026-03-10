@@ -10,6 +10,13 @@
 
 `script.md → video_manifest.md → assets生成 → clips/narration list → render-video.sh → video.mp4 → QA`
 
+## 正本ルール
+
+- **`script.md` を言語情報の正本**とする
+- `audio.narration.text` は `script.md` の narration を平易化したものであり、別の話を足さない
+- `image_generation.prompt` / `video_generation.motion_prompt` は `script.md` の visual beat を生成向けに翻訳したものであり、新しい物語情報を足さない
+- `scene_conte.md` は橋渡し資料であり、`script.md` と矛盾してはならない
+
 ## Scene → Assets 契約（最小）
 
 入力（scene単位）:
@@ -44,9 +51,16 @@
 
 運用（例）:
 1) `video_manifest.md` を cuts 前提で書く（`scenes[].cuts[]` でも、sceneをカットとして扱ってもよい）
-2) 先に音声だけ生成して秒数を確定する（audio-only）
+   - `audio.narration.text` は **空文字**でよい（未記入）。`TODO:` のようなメタ情報は入れない（TTSで喋られて事故る）
+2) Narration Writer が `audio.narration.text`（読み上げ原稿）を確定する
+   - 原稿は平易で寄り添う話し言葉を優先する
+   - 深い設計意図や抽象テーマは、基本的にナレーションで説明せず映像側へ置く
+   - 終盤の学び/余韻パートだけ、満足感のために軽く言語化してよい
+   - `script.md` に無い情報や、映像制作用のカメラ専門語は原則入れない
+3) 先に音声だけ生成して秒数を確定する（audio-only）
    - `python scripts/generate-assets-from-manifest.py --manifest output/<run>/video_manifest.md --skip-images --skip-videos`
-3) `video_generation.duration_seconds` をナレーション秒数に合わせて更新し、その後に画像/動画生成に進む
+4) `video_generation.duration_seconds` をナレーション秒数に合わせて更新し、その後に画像/動画生成に進む
+   - `python scripts/sync-manifest-durations-from-audio.py --manifest output/<run>/video_manifest.md`
 
 注意:
 - `cloud_island_walk`（哲学を島でPOV視点で語る体験）の指示・テンプレは別仕様として扱う（この運用変更の対象外）。

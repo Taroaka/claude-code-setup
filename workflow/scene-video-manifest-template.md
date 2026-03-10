@@ -20,10 +20,10 @@ assets:
 scenes:
   - scene_id: 1
     timestamp: "00:00-00:30"
-    # Cut planning rule (recommended):
-    # - 1 cut = 1 narration
-    # - main cut (at least 1): 5–15 seconds (based on narration actual duration)
-    # - sub cuts (optional): 3–15 seconds (short 3–4s cuts are sub-only; not for single-cut narration)
+    # カット設計ルール（推奨）:
+    # - 1カット = 1ナレーション
+    # - メインカット（最低1つ）: 5–15秒（ナレーションの実秒ベース）
+    # - サブカット（任意）: 3–15秒（短尺3–4秒はサブのみ。単一カットのナレーションで3秒は使わない）
     cuts:
       - cut_id: 1
         cut_role: "main"  # main|sub
@@ -32,6 +32,7 @@ scenes:
           # tool: "seadream"        # Seedream 4.5 (OpenAI Images compatible; see SEADREAM_* env)
           tool: "google_nanobanana_pro"
           character_ids: ["character_id_here"]  # Use [] for B-roll scenes with no characters visible
+          object_ids: []  # Use [] when no item / setpiece anchor is needed
           prompt: |
             [全体 / 不変条件]
             TODO: スタイル/POVの不変条件。画面内テキストなし、字幕なし、ウォーターマークなし。
@@ -71,6 +72,7 @@ scenes:
         image_generation:
           tool: "google_nanobanana_pro"
           character_ids: ["character_id_here"]
+          object_ids: []
           prompt: |
             [全体 / 不変条件]
             TODO: 前と同じスタイル/禁止。画面内テキストなし。

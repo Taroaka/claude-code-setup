@@ -7,8 +7,8 @@ video_metadata:
   topic: "<topic>"
   source_story: "output/<topic>_<timestamp>/story.md"
   created_at: "<ISO8601>"
-  duration_seconds: 0   # filled after narration is generated (optional)
-  experience: "ride_action_boat"
+  duration_seconds: 0   # ナレーション生成後に埋める（任意）
+  experience: "cinematic_story"
   aspect_ratio: "16:9"
   resolution: "1280x720"
   frame_rate: 24
@@ -60,6 +60,7 @@ scenes:
   # 0) キャラクター参照（推奨）
   # `scripts/toc-immersive-ride-generate.sh` で、正面出力から側面/背面と結合stripを自動生成する。
   - scene_id: 0
+    kind: character_reference
     image_generation:
       tool: "google_nanobanana_pro"
       character_ids: ["protagonist"]
@@ -93,8 +94,8 @@ scenes:
       object_ids: []
       prompt: |
         [全体 / 不変条件]
-        一人称POVのライド（アクションボート）。手は画面下の前景に必ず入れ、安全バーを握っている。
-        テーマパークのライド軌道（中央レール）が中央に見える。実写、シネマティック、実物セット感。
+        実写、シネマティック、プラクティカルエフェクト（実物セット感）。自然な映画照明。
+        視点: 客観（三人称）。1カット内で視点ブレさせない。
         画面内テキストなし、字幕なし、ウォーターマークなし、ロゴなし。
 
         [登場人物]
@@ -105,13 +106,13 @@ scenes:
         [シーン]
         舞台: <topic> の世界へ入る入口。実物セット、実写照明。
         見せ場: 最初の登場人物が前方に現れ、世界へ引き込まれる。
-        構図: 手+安全バーが前景、軌道は中央、登場人物は中景、目的地は遠景。
+        構図: 主役を中景、入口/ゲートを遠景の中心に置き、導線（道/光/柱）で視線誘導する。
 
         [連続性]
-        次への仕込み: 軌道が自然につながり、照明が滑らかに遷移する。
+        次への仕込み: 導線が自然につながり、照明が滑らかに遷移する。
 
         [禁止]
-        アニメ/漫画/イラスト調。手の崩れ、指の増殖。あらゆる文字要素。
+        アニメ/漫画/イラスト調。あらゆる文字要素。人体の崩れ、指の増殖、パース破綻。
       output: "assets/scenes/scene10.png"
       aspect_ratio: "16:9"
       image_size: "2K"
@@ -127,11 +128,11 @@ scenes:
       duration_seconds: 8
       first_frame: "assets/scenes/scene10.png"
       last_frame: "assets/scenes/scene20.png"
-      motion_prompt: "Ride action boat moves forward smoothly along the track; natural lighting transition."
+      motion_prompt: "カメラが滑らかに前進し、照明が自然に遷移する（1カット内で視点ブレさせない）。"
       output: "assets/scenes/scene10_to_20.mp4"
     audio:
       narration:
-        text: "TODO: このクリップのナレーション（1カット=1ナレーション、15秒以内目安）"
+        text: ""
         tool: "elevenlabs"
         output: "assets/audio/scene10_narration.mp3"
         normalize_to_scene_duration: false
@@ -144,8 +145,8 @@ scenes:
       object_ids: []
       prompt: |
         [全体 / 不変条件]
-        一人称POVのライド（アクションボート）。手は画面下の前景に必ず入れ、安全バーを握っている。
-        テーマパークのライド軌道（中央レール）が中央に見える。実写、シネマティック、実物セット感。
+        実写、シネマティック、プラクティカルエフェクト（実物セット感）。自然な映画照明。
+        視点: 客観（三人称）。1カット内で視点ブレさせない。
         画面内テキストなし、字幕なし、ウォーターマークなし、ロゴなし。
 
         [登場人物]
@@ -156,14 +157,14 @@ scenes:
         [シーン]
         舞台: <topic> の世界をさらに進む。実物の霧と軽い水しぶき（プラクティカル）。
         見せ場: 前方の出来事に登場人物が反応する。
-        構図: 登場人物は中景、出来事/発見は遠景、軌道は中央を維持。
+        構図: 中景の登場人物と、遠景の出来事/発見を同一フレームに入れる。導線で前進感を作る。
 
         [連続性]
-        前と一致: 手と安全バーのディテール、前進方向。
+        前と一致: 照明方向、色温度、空気感。
         次への仕込み: 緩やかな左カーブが始まり、次の発見を予告する。
 
         [禁止]
-        アニメ/漫画/イラスト調。手の崩れ、指の増殖。あらゆる文字要素。
+        アニメ/漫画/イラスト調。あらゆる文字要素。人体の崩れ、指の増殖、パース破綻。
       output: "assets/scenes/scene20.png"
       aspect_ratio: "16:9"
       image_size: "2K"
@@ -179,11 +180,11 @@ scenes:
       duration_seconds: 8
       first_frame: "assets/scenes/scene20.png"
       last_frame: "assets/scenes/scene30.png"
-      motion_prompt: "緩やかなカーブを描きながら前進を継続。POVと手と安全バーの位置を維持。"
+      motion_prompt: "緩やかなカーブを描きながら前進を継続。カメラ高さと地平線の安定を保つ。"
       output: "assets/scenes/scene20_to_30.mp4"
     audio:
       narration:
-        text: "TODO: このクリップのナレーション（1カット=1ナレーション、15秒以内目安）"
+        text: ""
         tool: "elevenlabs"
         output: "assets/audio/scene20_narration.mp3"
         normalize_to_scene_duration: false
@@ -196,8 +197,8 @@ scenes:
       object_ids: []
       prompt: |
         [全体 / 不変条件]
-        一人称POVのライド（アクションボート）。手は画面下の前景に必ず入れ、安全バーを握っている。
-        ライド軌道（中央レール）は中央。実写、シネマティック、実物セット感。
+        実写、シネマティック、プラクティカルエフェクト（実物セット感）。自然な映画照明。
+        視点: 客観（三人称）。1カット内で視点ブレさせない。
         画面内テキストなし、字幕なし、ウォーターマークなし、ロゴなし。
 
         [登場人物]
@@ -208,13 +209,13 @@ scenes:
         [シーン]
         舞台: <topic> のクライマックス的な“発見”エリア（実物セット + 映画照明）。
         見せ場: 遠景の発見が画面を満たし、登場人物が反応する。
-        構図: 手+安全バーが前景、登場人物が中景、発見が遠景、軌道は中央。
+        構図: 登場人物が中景、発見が遠景。導線/光で中心へ視線誘導。
 
         [連続性]
         前と一致: 照明方向と前進の段取り。
 
         [禁止]
-        アニメ/漫画/イラスト調。手の崩れ、指の増殖。あらゆる文字要素。
+        アニメ/漫画/イラスト調。あらゆる文字要素。人体の崩れ、指の増殖、パース破綻。
       output: "assets/scenes/scene30.png"
       aspect_ratio: "16:9"
       image_size: "2K"
@@ -222,7 +223,7 @@ scenes:
       iterations: 4
       selected: null
 
-  # Example B-roll (no story character visible; still must keep POV invariants)
+  # Example B-roll（物語キャラクター非表示でも、スタイル/連続性は維持）
   - scene_id: 40
     timestamp: "00:24-00:32"
     image_generation:
@@ -231,8 +232,8 @@ scenes:
       object_ids: []
       prompt: |
         [全体 / 不変条件]
-        一人称POVのライド（アクションボート）。手は画面下の前景に必ず入れ、安全バーを握っている。
-        ライド軌道（中央レール）は中央。実写、シネマティック、実物セット感。
+        実写、シネマティック、プラクティカルエフェクト（実物セット感）。自然な映画照明。
+        視点: 客観（三人称）。1カット内で視点ブレさせない。
         画面内テキストなし、字幕なし、ウォーターマークなし、ロゴなし。
 
         [小道具 / 舞台装置]

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Scaffold a run folder for the immersive ride POV workflow (/toc-immersive-ride).
+Scaffold a run folder for the immersive (cinematic) workflow (/toc-immersive-ride).
 
 This script is intentionally a helper:
 - It creates output/<topic>_<timestamp>/ with standard files and folders
@@ -13,11 +13,20 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import re
+import sys
 from pathlib import Path
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from toc.harness import append_state_snapshot
+
 EXPERIENCE_TEMPLATES: dict[str, Path] = {
-    "ride_action_boat": Path("workflow/immersive-ride-video-manifest-template.md"),
+    "cinematic_story": Path("workflow/immersive-ride-video-manifest-template.md"),
     "cloud_island_walk": Path("workflow/immersive-cloud-island-walk-video-manifest-template.md"),
+    # legacy alias (kept for backward compatibility; canonicalized to cinematic_story)
+    "ride_action_boat": Path("workflow/immersive-ride-video-manifest-template.md"),
 }
 SCENE_CONTE_TEMPLATE = Path("workflow/scene-conte-template.md")
 
@@ -39,11 +48,7 @@ def default_timestamp() -> str:
 
 
 def append_state_block(state_path: Path, kv: dict[str, str]) -> None:
-    state_path.parent.mkdir(parents=True, exist_ok=True)
-    lines = [f"{k}={v}" for k, v in kv.items()]
-    block = "\n".join(lines) + "\n---\n"
-    with state_path.open("a", encoding="utf-8") as f:
-        f.write(block)
+    append_state_snapshot(state_path, kv)
 
 
 def write_text(path: Path, content: str, force: bool) -> bool:
@@ -55,7 +60,7 @@ def write_text(path: Path, content: str, force: bool) -> bool:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Scaffold an immersive ride POV run folder.")
+    parser = argparse.ArgumentParser(description="Scaffold an immersive run folder.")
     parser.add_argument("--topic", required=True, help="Video topic (used for folder name).")
     parser.add_argument("--timestamp", default=None, help="Timestamp (YYYYMMDD_HHMM).")
     parser.add_argument("--base", default="output", help="Base output directory.")
@@ -79,6 +84,11 @@ def main() -> None:
     topic_slug = sanitize_topic(topic_raw)
     ts = args.timestamp or default_timestamp()
 
+    experience = str(args.experience)
+    if experience == "ride_action_boat":
+        print("[warn] --experience ride_action_boat is deprecated; using cinematic_story.")
+        experience = "cinematic_story"
+
     run_dir = Path(args.run_dir) if args.run_dir else (Path(args.base) / f"{topic_slug}_{ts}")
     run_dir.mkdir(parents=True, exist_ok=True)
 
@@ -99,13 +109,14 @@ def main() -> None:
                 "topic": topic_raw,
                 "status": "INIT",
                 "runtime.stage": "immersive_ride_scaffold",
-                "immersive.experience": str(args.experience),
+                "gate.video_review": "required",
+                "immersive.experience": str(experience),
             },
         )
 
-    write_text(run_dir / "research.md", "# Research Output\n\nTBD\n", force=args.force)
-    write_text(run_dir / "story.md", "# Story Script Output\n\nTBD\n", force=args.force)
-    write_text(run_dir / "script.md", "# Script Output (Immersive Ride POV)\n\nTBD\n", force=args.force)
+    write_text(run_dir / "research.md", "# リサーチ（出力）\n\nTODO\n", force=args.force)
+    write_text(run_dir / "story.md", "# 物語（story）\n\nTODO\n", force=args.force)
+    write_text(run_dir / "script.md", "# 台本（没入型 / cinematic）\n\nTODO\n", force=args.force)
     if SCENE_CONTE_TEMPLATE.exists():
         tmpl = SCENE_CONTE_TEMPLATE.read_text(encoding="utf-8")
         tmpl = (
@@ -115,9 +126,9 @@ def main() -> None:
         )
         write_text(run_dir / "scene_conte.md", tmpl, force=args.force)
 
-    template_path = EXPERIENCE_TEMPLATES.get(str(args.experience))
+    template_path = EXPERIENCE_TEMPLATES.get(str(experience))
     if template_path is None:
-        raise SystemExit(f"Unknown --experience: {args.experience}")
+        raise SystemExit(f"Unknown --experience: {experience}")
     if template_path.exists():
         tmpl = template_path.read_text(encoding="utf-8")
         tmpl = (
@@ -148,7 +159,7 @@ def main() -> None:
             "topic": topic_raw,
             "status": "DONE",
             "runtime.stage": "immersive_ride_scaffolded",
-            "immersive.experience": str(args.experience),
+            "immersive.experience": str(experience),
             "artifact.video_manifest": str((run_dir / "video_manifest.md").resolve()),
         },
     )

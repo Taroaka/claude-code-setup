@@ -137,21 +137,20 @@ aspect ratio / size は `image_generation.aspect_ratio` / `image_generation.imag
 
 ---
 
-## 3) /toc-immersive-ride（ride_action_boat）向け invariants（推奨セット）
+## 3) /toc-immersive-ride（cinematic_story）向け invariants（推奨セット）
 
-注意: これは `/toc-immersive-ride --experience ride_action_boat` 用の固定条件。通常の run / scene-series では前提にしない（必要なら個別に指定する）。
+注意: これは `/toc-immersive-ride --experience cinematic_story` 用の固定条件。通常の run / scene-series では前提にしない（必要なら個別に指定する）。
 
 `全体 / 不変条件` に毎回入れる（または将来的に assets から自動注入する）:
 
-- `一人称POVのライド（アクションボート）`
-- `画面下の前景に手があり、安全バーを握っている`
-- `中央にレールが見える軌道が中央構図`
 - `実写、シネマティック、実物セット感`
+- `視点（POV/三人称）を明示し、1カット内で視点ブレさせない`
+- `前景/中景/遠景のアンカー（人物/アイテム/導線）を指定する`
 - `画面内テキストなし、字幕なし、ウォーターマークなし`
 
 さらに “事故りやすい” ので早めに禁止しておく:
 - `アニメ/漫画/イラスト調`
-- `手の崩れ / 指の増殖`
+- `人体の崩れ / 指の増殖 / パース破綻`
 
 ## 3.2 /toc-immersive-ride（cloud_island_walk）向け invariants（推奨セット）
 
@@ -253,9 +252,9 @@ anime/cartoon/illustration, exaggerated makeup, text, watermark.
 
 ```text
 [GLOBAL / INVARIANTS]
-First-person POV from ride action boat. Realistic hands gripping ornate brass safety bar in the lower foreground.
-Theme park ride track with central rail visible, centered. Photorealistic, cinematic, practical effects.
-No text, no subtitles, no watermark.
+実写、シネマティック、プラクティカルエフェクト（実物セット感）。アニメ調なし。
+視点: 客観（三人称）。1カット内で視点ブレさせない。
+画面内テキストなし、字幕なし、ウォーターマークなし、ロゴなし。
 
 [CHARACTERS]
 The story character(s) MUST match the reference image exactly (same face, hair, outfit).
@@ -263,10 +262,10 @@ The story character(s) MUST match the reference image exactly (same face, hair, 
 [SCENE]
 Setting: dusk, misty entrance gate into the world of <topic>. Practical set pieces, real lighting.
 Key moment: the gate opens and a story character draws you into the world.
-Composition: hands+bar foreground; track centered; story character mid-ground; glowing gate far background center.
+Composition: 前景=導線（道/門柱/光の筋）; 中景=物語キャラ; 遠景=発光するゲート（中央）。
 
 [CONTINUITY]
-Set up next: track curves left beyond the gate; warm light spills from the left side.
+Set up next: 導線が左へカーブし、左側から暖かい光が漏れる。
 
 [AVOID]
 anime/cartoon/illustration, CGI look, distorted hands, extra fingers, text, logos.
@@ -276,20 +275,20 @@ anime/cartoon/illustration, CGI look, distorted hands, extra fingers, text, logo
 
 ```text
 [GLOBAL / INVARIANTS]
-First-person POV from ride action boat. Realistic hands gripping ornate brass safety bar in the lower foreground.
-Track centered with central rail visible. Photorealistic, cinematic, practical effects. No text.
+実写、シネマティック、プラクティカルエフェクト（実物セット感）。アニメ調なし。
+視点: 客観（三人称）。カメラ高さは安定。画面内テキストなし。
 
 [CHARACTERS]
 The story character(s) match the reference image exactly.
 
 [SCENE]
-Setting: the ride enters a new area themed around <topic>; practical fog and water spray; wet reflections on metal.
+Setting: <topic> の世界の新エリアへカメラが入る。実物の霧と水しぶき。金属の濡れ反射。
 Key moment: the first big reveal appears ahead.
-Composition: story character mid-ground center (if present); reveal object far background; droplets on lens kept subtle.
+Composition: 中景=物語キャラ（必要なら）; 遠景=見せ場の対象（中央）; 前景=霧/水しぶきは控えめ。
 
 [CONTINUITY]
-Must match previous: warm light source from left, same brass bar details.
-Set up next: reveal object becomes dominant in frame, centered.
+Must match previous: 光源方向/色温度/空気感。
+Set up next: 見せ場の対象がフレームを支配し、次カットで寄れる状態にする。
 
 [AVOID]
 anime/cartoon/illustration, unreadable shapes, extreme motion blur, text, watermark.
@@ -299,8 +298,8 @@ anime/cartoon/illustration, unreadable shapes, extreme motion blur, text, waterm
 
 ## 5) チェックリスト（生成前レビュー）
 
-- [ ] POV が明示されている（first-person / foreground hands 等）
-- [ ] “画面内のアンカー”が書かれている（前景/中景/背景の配置）
+- [ ] 視点（POV/三人称）とカメラ意図が明示されている（1カット内でブレない）
+- [ ] “画面内のアンカー”が書かれている（前景/中景/背景の配置。手元固定に限らない）
 - [ ] 参照画像を使う前提の文がある（“must match reference” 等）
 - [ ] 禁止事項（文字/アニメ調/崩れ手）が短く入っている
 - [ ] scene固有の差分（場所/時間/出来事）が 1〜3文で具体

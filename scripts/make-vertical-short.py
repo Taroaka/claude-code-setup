@@ -91,6 +91,16 @@ def _resolve_artifact_path(run_dir: Path, value: str | None) -> Path | None:
 
 
 def require_approved(state: dict[str, str], run_dir: Path) -> None:
+    hybrid_gate = state.get("gate.hybridization_review", "").strip().lower()
+    hybrid_status = state.get("review.hybridization.status", "").strip().lower()
+    if hybrid_gate == "required" and hybrid_status != "approved":
+        msg = [
+            f"Hybridization review required but not approved: review.hybridization.status={state.get('review.hybridization.status', '')!r}",
+            "Approve it first, e.g.:",
+            f"  python scripts/toc-state.py approve-hybridization --run-dir {run_dir} --note \"OK\"",
+        ]
+        raise SystemExit("\n".join(msg))
+
     status = state.get("review.video.status", "").strip().lower()
     if status != "approved":
         msg = [

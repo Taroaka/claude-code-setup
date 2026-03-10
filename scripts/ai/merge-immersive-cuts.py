@@ -101,6 +101,28 @@ def _validate_cut_scene_file(
         out_cut = dict(raw)
         out_cut["cut_id"] = int(cut_id)
         out_cut["image_generation"] = ig
+
+        # Ensure audio narration exists by default (1 cut = 1 narration).
+        # Users can intentionally skip TTS at generation time via --skip-audio.
+        audio = out_cut.get("audio")
+        if not isinstance(audio, dict):
+            audio = {}
+            out_cut["audio"] = audio
+        narration = audio.get("narration")
+        if not isinstance(narration, dict):
+            narration = {}
+            audio["narration"] = narration
+        if "tool" not in narration or not str(narration.get("tool") or "").strip():
+            narration["tool"] = "elevenlabs"
+        # Do NOT inject placeholder narration text: this field is sent to TTS as-is.
+        # Leave it empty so that missing narration is caught early (unless --skip-audio).
+        if "text" not in narration:
+            narration["text"] = ""
+        if "output" not in narration or not str(narration.get("output") or "").strip():
+            narration["output"] = f"assets/audio/scene{scene_id:02d}_cut{cut_id:02d}_narration.mp3"
+        if "normalize_to_scene_duration" not in narration:
+            narration["normalize_to_scene_duration"] = False
+
         normalized.append(out_cut)
 
     normalized.sort(key=lambda c: int(_as_int(c.get("cut_id")) or 0))

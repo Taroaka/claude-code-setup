@@ -3,7 +3,7 @@ set -euo pipefail
 
 usage() {
   cat <<'USAGE'
-Generate assets and render the final immersive ride POV video from an existing run dir.
+Generate assets and render the final immersive (cinematic) video from an existing run dir.
 
 Usage:
   scripts/toc-immersive-ride-generate.sh --run-dir output/<topic>_<timestamp>
@@ -43,6 +43,28 @@ fi
 
 python scripts/toc-state.py ensure --run-dir "$run_dir" --manifest "$manifest"
 
+python - <<'PY'
+from pathlib import Path
+run_dir = Path(r"""'"$run_dir"'""")
+state_path = run_dir / "state.txt"
+if not state_path.exists():
+    raise SystemExit(0)
+state = {}
+for raw in state_path.read_text(encoding="utf-8").splitlines():
+    line = raw.strip()
+    if not line or line == "---" or line.startswith("#") or "=" not in line:
+        continue
+    k, v = line.split("=", 1)
+    state[k.strip()] = v.strip()
+gate = state.get("gate.hybridization_review", "").strip().lower()
+status = state.get("review.hybridization.status", "").strip().lower()
+if gate == "required" and status != "approved":
+    raise SystemExit(
+        "Hybridization approval is required before generating assets.\n"
+        f"  python scripts/toc-state.py approve-hybridization --run-dir {run_dir} --note \"OK\""
+    )
+PY
+
 stage="assets"
 on_err() {
   code=$?
@@ -59,8 +81,23 @@ python scripts/toc-state.py append --run-dir "$run_dir" \
   --set "runtime.stage=${stage}" \
   --set "runtime.render.status=started"
 
+override_tool="${TOC_OVERRIDE_NARRATION_TOOL:-}"
+override_args=()
+if [[ -n "$override_tool" ]]; then
+  override_args=(--override-narration-tool "$override_tool")
+fi
+
 python scripts/generate-assets-from-manifest.py \
   --manifest "$manifest" \
+  --skip-images --skip-videos \
+  "${override_args[@]}"
+
+python scripts/sync-manifest-durations-from-audio.py \
+  --manifest "$manifest"
+
+python scripts/generate-assets-from-manifest.py \
+  --manifest "$manifest" \
+  --skip-audio \
   --apply-asset-guides \
   --asset-guides-character-refs scene \
   --require-character-ids \
@@ -105,6 +142,11 @@ python scripts/toc-state.py append --run-dir "$run_dir" \
   --set "runtime.render.status=success" \
   --set "artifact.video=${run_dir%/}/video.mp4" \
   --set "review.video.status=pending"
+
+python scripts/verify-pipeline.py \
+  --run-dir "$run_dir" \
+  --flow immersive \
+  --profile standard
 
 echo "Done:"
 echo "  - ${run_dir%/}/video.mp4"

@@ -1,24 +1,23 @@
-# Evidence (Scene <scene_id>)
+# 根拠（Scene <scene_id>）
 
-## Question
+## 質問
 
 <question>
 
-## Answer (short)
+## 結論（短く）
 
 <answer>
 
-## Evidence bullets
+## 根拠（箇条書き）
 
 - <evidence_1>
 - <evidence_2>
 - <evidence_3>
 
-## Sources
+## ソース
 
 - <url_or_source> — <why_this_supports_the_answer>
 
-## Gaps / Notes
+## 不確実点 / メモ
 
 - <what_is_missing_or_uncertain>
-

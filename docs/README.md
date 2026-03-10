@@ -32,6 +32,7 @@
 ## データ/運用
 - データライフサイクル: `docs/data-lifecycle.md`
 - データ契約（state/成果物テンプレ）: `docs/data-contracts.md`
+- ADR: `docs/adr/`
 - パイプライン方式選択（自然言語）: `workflow/playbooks/README.md`
 - セキュリティ/コンプライアンス: `docs/security-compliance.md`
 - CI/CD: `docs/ci-cd.md`

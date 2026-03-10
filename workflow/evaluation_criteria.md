@@ -1,80 +1,107 @@
-# Evaluation Criteria (Prompt Optimizer)
+# Evaluation Criteria
 
-本ファイルは、`workflow/datasets/` の dataset（入力例 + 理想出力）に対して、
-「生成プロンプト（または生成指示）がどの程度うまく作れているか」を評価するための基準を定義する。
+ToC の評価は prompt 単体の出来ではなく、pipeline の各 stage が
+「必要構造・必要根拠・必要 gate」を満たしているかで判定する。
 
-目的:
-- scene spec（`script.md` の scene）→ image/video/overlay 等の生成指示を **安定して作れる**ようにする
-- “良し悪し”を人の感覚で終わらせず、差分分析→改善の反復ができるようにする
+## 目的
 
-## 対象（何を評価するか）
+- `research -> story -> script -> manifest -> video` を共通の評価面に揃える
+- exact text 一致ではなく、構造・根拠・運用 gate の通過可能性を評価する
+- `eval_report.json` と `run_report.md` を毎 run の標準成果物にする
 
-最小の対象は次のいずれか:
-- Scene → `image_prompt`（静止画生成用）
-- Scene → `motion_prompt`（image-to-video 用）
-- Scene → `text_overlay`（テロップ内容/タイミング）
+## 評価対象
 
-拡張:
-- negative prompt
-- seed / style params（provider依存のため、まずは任意）
+### 1. Research
 
-## スコアリング（例）
+- sources 数
+- canonical synopsis の有無
+- beat sheet の量
+- scene plan の coverage
+- conflicts の棚卸し
+- confidence score
+- scene_id 配賦
 
-重みは固定しない。まずは 0–100 の主観採点で運用し、後で調整する。
+### 2. Story
 
-### 1) Scene Alignment（整合性）
+- 2–4 candidate の比較
+- chosen candidate と rationale
+- scripted scene の research refs
+- hybridization 承認要否の明示
 
-- scene の意図（場所/時間/状況/感情/行動）と、生成指示が一致している
-- narration と絵が矛盾しない
+### 3. Script
 
-### 2) Character Consistency（キャラクター一貫性）
+- scene / cut の最小構造
+- 実質的な内容量
+- `TODO` / `TBD` の残存有無
 
-- character bible / fixed prompts に沿う
-- 服装・髪・年齢感がブレない
+### 4. Manifest
 
-### 3) Cinematic Quality（映像指示の質）
+- renderable scene / cut の存在
+- `1 cut = 1 narration`
+- narration text field の存在
+- cut duration 上限
+- `character_ids` / `object_ids` の明示
+- immersive の invariant（experience / no on-screen text）
 
-- shot（画角/アングル/構図/照明）が具体
-- “何をどう見せるか”が明確で、生成に必要十分
+### 5. Video
 
-### 4) Provider Robustness（プロバイダ差分耐性）
+- `video.mp4` existence
+- render status
+- human review 用の `run_report.md`
+- narration list / media duration の最低整合
 
-- 特定ベンダ依存の言い回しを避け、一般的な記述で成立している
-- provider 固有機能（参照強度等）は別フィールドで切れる
+## 判定方式
 
-### 5) Overlay Readability（テロップ可読性）
+- deterministic check:
+  - file exists
+  - YAML parse
+  - field exists
+  - count threshold
+  - path exists
+- rubric check:
+  - TODO 未解消
+  - coverage
+  - rationale の有無
+  - gate の未解決状態
 
-- 短く、読みやすい（視線誘導ができる）
-- 字幕/テロップと映像が衝突しにくい（背景/位置/長さの配慮）
+各 stage score は `passed_checks / total_checks` とする。
 
-### 6) Safety / Compliance（必要なら）
+## 出力
 
-- 明確に禁止したい要素が入っていない（ブランド/著作物/人物など）
+`eval_report.json` の最小形:
 
-## 出力（評価ログの書き方）
-
-各イテレーションで最低限これを残す:
-
-```yaml
-iteration: 1
-sampled_datasets:
-  - "workflow/datasets/momotaro_v1.yaml"
-samples_used:
-  - case_id: "momotaro_scene1"
-    score:
-      scene_alignment: 80
-      character_consistency: 60
-      cinematic_quality: 70
-      provider_robustness: 75
-      overlay_readability: 85
-    issues:
-      - "主題は合っているが、時間帯が曖昧"
-    fixes:
-      - "prompt に time_of_day を明示"
-stop_condition_met: false
+```json
+{
+  "generated_at": "ISO8601",
+  "run_dir": "output/<topic>_<timestamp>",
+  "flow": "toc-run|scene-series|immersive",
+  "profile": "fast|standard",
+  "overall": {
+    "passed": true,
+    "score": 0.84,
+    "failed_stages": []
+  },
+  "stages": {
+    "research": {
+      "passed": true,
+      "score": 0.88,
+      "checks": []
+    }
+  }
+}
 ```
 
-停止条件（例）:
-- 最大 N イテレーション
-- 平均スコア >= 90
+`run_report.md` は上記から生成し、手書きしない。
 
+## 運用
+
+- fast:
+  - pointer/state/schema/tests 向け
+  - 存在確認と最小構造を優先
+- standard:
+  - final review 前提
+  - TODO 禁止、gate 未解決禁止、manifest/video 契約をより厳しく見る
+
+## 回帰セット
+
+- `workflow/evals/golden-topics.yaml`

@@ -20,4 +20,9 @@
 - BGM/SFX の扱い（内製/生成、音量基準）
 
 ## Data/Logging
-- `orchestration_manifest.md` と `run_report.md` の正本（ファイル/DBの役割分担）
+- `orchestration_manifest.md` の正本（ファイル/DBの役割分担）
+- `run_status.json` を DB 的にどこまで使うか
+
+## ADR backlog
+
+- Accepted decisions are moved to `docs/adr/`
